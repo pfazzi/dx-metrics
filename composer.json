@@ -20,5 +20,8 @@
             "name": "Patrick Luca Fazzi",
             "email": "patrick91@live.it"
         }
-    ]
+    ],
+    "require": {
+        "symfony/console": "^7.3"
+    }
 }

@@ -77,4 +77,48 @@ class GitTest extends TestCase
 
         self::assertEquals($shaList, $result);
     }
+
+    public function test_get_commits__when_date_interval_is_specified__filters_commit_sha_list(): void
+    {
+        $git = new Git($this->repoPath);
+
+        $this->commit(
+            $this->repoPath,
+            new \DateTimeImmutable('2024-01-05T12:00:00+0000'),
+            'feat: initial order+invoice',
+            [
+                '/src/Order.php' => "order v1\n",
+                '/src/Invoice.php' => "invoice v1\n",
+            ],
+        );
+
+        $shaList[] = $this->commit(
+            $this->repoPath,
+            new \DateTimeImmutable('2024-01-10T12:00:00+0000'),
+            'feat: second change to order+invoice',
+            [
+                '/src/Order.php' => "order v2\n",
+                '/src/Invoice.php' => "invoice v2\n",
+            ],
+        );
+
+        $this->commit(
+            $this->repoPath,
+            new \DateTimeImmutable('2024-01-15T12:00:00+0000'),
+            'feat: second change to order+invoice',
+            [
+                '/src/Order.php' => "order v3\n",
+                '/src/Invoice.php' => "invoice v3\n",
+            ],
+        );
+
+        $shaList = array_reverse($shaList); // Sorts from the newest to the oldest
+
+        $result = $git->getCommitsSha(
+            since: new \DateTimeImmutable('2024-01-10'),
+            until: new \DateTimeImmutable('2024-01-10'),
+        );
+
+        self::assertEquals($shaList, $result);
+    }
 }

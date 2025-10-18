@@ -19,8 +19,18 @@ readonly class Git
         return $this->runCommand($command, $this->repoPath);
     }
 
-    public function getCommitsSha(): array
+    public function getCommitsSha(?\DateTimeImmutable $since = null, ?\DateTimeImmutable $until = null): array
     {
-        return $this->runCommand('git rev-list --all', $this->repoPath);
+        $command = 'git rev-list --all';
+
+        if ($since) {
+            $command .= " --since=\"{$since->format('Y-m-d')}\"";
+        }
+
+        if ($until) {
+            $command .= " --until=\"{$until->format('Y-m-d')}\"";
+        }
+
+        return $this->runCommand($command, $this->repoPath);
     }
 }

@@ -2,11 +2,17 @@
     "name": "pfazzi/dx_metrics",
     "type": "library",
     "require-dev": {
-        "phpunit/phpunit": "^12.4"
+        "phpunit/phpunit": "^12.4",
+        "friendsofphp/php-cs-fixer": "^3.88"
     },
     "autoload": {
         "psr-4": {
             "Pfazzi\\DxMetrics\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Pfazzi\\DxMetrics\\Tests\\": "tests/"
         }
     },
     "authors": [
@@ -14,6 +20,5 @@
             "name": "Patrick Luca Fazzi",
             "email": "patrick91@live.it"
         }
-    ],
-    "require": {}
+    ]
 }

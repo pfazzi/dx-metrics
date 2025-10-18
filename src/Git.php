@@ -18,4 +18,9 @@ readonly class Git
 
         return $this->runCommand($command, $this->repoPath);
     }
+
+    public function getCommitsSha(): array
+    {
+        return $this->runCommand('git rev-list --all', $this->repoPath);
+    }
 }

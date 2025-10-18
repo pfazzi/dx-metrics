@@ -46,4 +46,35 @@ class GitTest extends TestCase
             'src/Invoice.php',
         ], $files);
     }
+
+    public function test_get_commits__when_valid_repo_path__returns_commit_sha_list(): void
+    {
+        $git = new Git($this->repoPath);
+
+        $shaList[] = $this->commit(
+            $this->repoPath,
+            new \DateTimeImmutable('2024-01-05T12:00:00+0000'),
+            'feat: initial order+invoice',
+            [
+                '/src/Order.php' => "order v1\n",
+                '/src/Invoice.php' => "invoice v1\n",
+            ],
+        );
+
+        $shaList[] = $this->commit(
+            $this->repoPath,
+            new \DateTimeImmutable('2024-01-05T12:00:00+0000'),
+            'feat: second change to order+invoice',
+            [
+                '/src/Order.php' => "order v2\n",
+                '/src/Invoice.php' => "invoice v2\n",
+            ],
+        );
+
+        $shaList = array_reverse($shaList); // Sorts from the newest to the oldest
+
+        $result = $git->getCommitsSha();
+
+        self::assertEquals($shaList, $result);
+    }
 }

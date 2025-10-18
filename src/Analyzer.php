@@ -10,11 +10,11 @@ readonly class Analyzer
     {
     }
 
-    public function computeCoupling(): array
+    public function computeCoupling(?\DateTimeImmutable $since = null, ?\DateTimeImmutable $until = null): array
     {
         $coupling = [];
 
-        $commits = $this->git->getCommitsSha();
+        $commits = $this->git->getCommitsSha($since, $until);
 
         foreach ($commits as $commit) {
             $changes = $this->git->getChangesFromCommit($commit);

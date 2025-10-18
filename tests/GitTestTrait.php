@@ -18,7 +18,6 @@ trait GitTestTrait
             $this->append($repoPath.$path, $content);
         }
 
-        $this->append($repoPath.'/src/Invoice.php', "invoice v2\n");
         $this->runCommand('git add -A', $repoPath);
 
         $message = escapeshellarg($message);

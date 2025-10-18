@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Pfazzi\DxMetrics\Tests;
@@ -31,10 +32,10 @@ class GitTest extends TestCase
         $sha = $this->commit(
             $this->repoPath,
             new \DateTimeImmutable('2024-01-05T12:00:00+0000'),
-            "feat: initial order+invoice",
+            'feat: initial order+invoice',
             [
                 '/src/Order.php' => "order v1\n",
-                '/src/Invoice.php'=> "invoice v1\n"
+                '/src/Invoice.php' => "invoice v1\n",
             ],
         );
 

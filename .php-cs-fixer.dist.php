@@ -7,6 +7,11 @@ $finder = PhpCsFixer\Finder::create()
 
 return (new PhpCsFixer\Config())
     ->setRules([
+        '@Symfony' => true,
+        '@Symfony:risky' => true,
         'php_unit_method_casing' => ['case' => 'snake_case'],
+        'php_unit_attributes' => true,
     ])
-    ->setFinder($finder);
+    ->setRiskyAllowed(true)
+    ->setFinder($finder)
+    ->setParallelConfig(PhpCsFixer\Runner\Parallel\ParallelConfigFactory::detect());

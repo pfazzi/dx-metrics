@@ -89,6 +89,41 @@ class Analyze extends Command
 
         $this->renderOutput($output, $coupling);
 
+        $this->plotOutput($coupling);
+
         return Command::SUCCESS;
+    }
+
+    private function plotOutput(array $coupling): void
+    {
+        $min = $coupling[array_key_last($coupling)]['changes'];
+
+        $shorten = function (string $s): string {
+            $parts = explode('/', $s);
+            return implode('/', array_slice($parts, -3));
+        };
+
+        $dot = "graph G {\n"
+            . "  graph [overlap=false, splines=true];\n"
+            . "  node [shape=box, fontsize=10];\n";
+
+        foreach ($coupling as $p) {
+            $a = addslashes($p['files'][0]);
+            $b = addslashes($p['files'][1]);
+            $w = $p['changes'];
+            $pen = $w * 2 / $min;
+            $dot .= sprintf(
+                "  \"%s\" -- \"%s\" [penwidth=%d, label=\"%d\"];\n",
+                $shorten($a),
+                $shorten($b),
+                $pen,
+                $w
+            );
+        }
+        $dot .= "}\n";
+
+        file_put_contents('coupling.dot', $dot);
+
+        exec('dot -Tpng coupling.dot -o coupling.png');
     }
 }

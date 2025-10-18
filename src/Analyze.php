@@ -13,7 +13,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class Analyze extends Command
 {
-    public function renderOutput(OutputInterface $output, array $coupling): void
+    private function renderOutput(OutputInterface $output, array $coupling): void
     {
         $table = new Table($output);
         $table->setHeaders(['File', 'File', 'Changes']);
@@ -29,12 +29,18 @@ class Analyze extends Command
         $table->render();
     }
 
-    public function computeCoupling(Analyzer $analyzer, mixed $since, mixed $until, int $threshold): array
+    private function computeCoupling(Analyzer $analyzer, ?\DateTimeImmutable $since, ?\DateTimeImmutable $until, int $threshold, ?string $filter): array
     {
         $coupling = $analyzer->computeCoupling($since, $until);
 
+        // Filter unique pairs
         $uniques = [];
         foreach ($coupling as $filesCouple) {
+            if (!str_starts_with($filesCouple['files'][0], $filter)
+            || !str_starts_with($filesCouple['files'][1], $filter)) {
+                continue;
+            }
+
             $keyA = $filesCouple['files'][0].$filesCouple['files'][1];
             $keyB = $filesCouple['files'][1].$filesCouple['files'][0];
             if (isset($uniques[$keyA]) || isset($uniques[$keyB])) {
@@ -44,16 +50,18 @@ class Analyze extends Command
         }
         $coupling = array_values($uniques);
 
+        // Filter by threshold
         if ($threshold > 0) {
             $coupling = array_filter($coupling, fn ($c) => $c['changes'] > $threshold);
         }
 
+        // Sort by changes
         usort($coupling, fn ($a, $b) => $b['changes'] <=> $a['changes']);
 
         return $coupling;
     }
 
-    public function getParams(InputInterface $input): array
+    private function getParams(InputInterface $input): array
     {
         $repoPath = $input->getArgument('path');
         $since = $input->getOption('since');
@@ -66,7 +74,9 @@ class Analyze extends Command
         }
         $threshold = (int) $input->getOption('threshold');
 
-        return [$repoPath, $since, $until, $threshold];
+        $filter = $input->getOption('filter');
+
+        return [$repoPath, $since, $until, $threshold, $filter];
     }
 
     protected function configure(): void
@@ -75,17 +85,18 @@ class Analyze extends Command
             ->addArgument('path', InputArgument::REQUIRED)
             ->addOption('since', 's', InputOption::VALUE_OPTIONAL, default: null)
             ->addOption('until', 'u', InputOption::VALUE_OPTIONAL, default: null)
-            ->addOption('threshold', 't', InputOption::VALUE_OPTIONAL, default: 0);
+            ->addOption('threshold', 't', InputOption::VALUE_OPTIONAL, default: 0)
+            ->addOption('filter', 'f', InputOption::VALUE_OPTIONAL, default: null);
     }
 
     public function execute(InputInterface $input, OutputInterface $output): int
     {
-        [$repoPath, $since, $until, $threshold] = $this->getParams($input);
+        [$repoPath, $since, $until, $threshold, $filter] = $this->getParams($input);
 
         $git = new Git($repoPath);
         $analyzer = new Analyzer($git);
 
-        $coupling = $this->computeCoupling($analyzer, $since, $until, $threshold);
+        $coupling = $this->computeCoupling($analyzer, $since, $until, $threshold, $filter);
 
         $this->renderOutput($output, $coupling);
 
@@ -100,22 +111,23 @@ class Analyze extends Command
 
         $shorten = function (string $s): string {
             $parts = explode('/', $s);
-            return implode('/', array_slice($parts, -3));
+
+            return implode('/', \array_slice($parts, -3));
         };
 
         $dot = "graph G {\n"
-            . "  graph [overlap=false, splines=true];\n"
-            . "  node [shape=box, fontsize=10];\n";
+            ."  graph [overlap=false, splines=true];\n"
+            ."  node [shape=box, fontsize=10];\n";
 
         foreach ($coupling as $p) {
             $a = addslashes($p['files'][0]);
             $b = addslashes($p['files'][1]);
             $w = $p['changes'];
             $pen = $w * 2 / $min;
-            $dot .= sprintf(
+            $dot .= \sprintf(
                 "  \"%s\" -- \"%s\" [penwidth=%d, label=\"%d\"];\n",
-                $shorten($a),
-                $shorten($b),
+                $a,
+                $b,
                 $pen,
                 $w
             );

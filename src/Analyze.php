@@ -16,13 +16,16 @@ class Analyze extends Command
     private function renderOutput(OutputInterface $output, array $coupling): void
     {
         $table = new Table($output);
-        $table->setHeaders(['File', 'File', 'Changes']);
+        $table->setHeaders(['File', 'File', 'Changes', 'Distance', 'Coupling', 'Cohesion']);
 
         foreach ($coupling as $filesCouple) {
             $table->addRow([
                 $filesCouple['files'][0],
                 $filesCouple['files'][1],
                 $filesCouple['changes'],
+                $filesCouple['distance'],
+                number_format($filesCouple['coupling'], 3),
+                number_format($filesCouple['cohesion'], 3),
             ]);
         }
 
@@ -57,6 +60,8 @@ class Analyze extends Command
 
         // Sort by changes
         usort($coupling, fn ($a, $b) => $b['changes'] <=> $a['changes']);
+
+        $this->computeCouplingAndCohesion($coupling);
 
         return $coupling;
     }
@@ -109,12 +114,6 @@ class Analyze extends Command
     {
         $min = $coupling[array_key_last($coupling)]['changes'];
 
-        $shorten = function (string $s): string {
-            $parts = explode('/', $s);
-
-            return implode('/', \array_slice($parts, -3));
-        };
-
         $dot = "graph G {\n"
             ."  graph [overlap=false, splines=true];\n"
             ."  node [shape=box, fontsize=10];\n";
@@ -137,5 +136,40 @@ class Analyze extends Command
         file_put_contents('coupling.dot', $dot);
 
         exec('dot -Tpng coupling.dot -o coupling.png');
+    }
+
+    public function pathDistance(string $a, string $b): float
+    {
+        $as = array_values(array_filter(explode('/', $a)));
+        $bs = array_values(array_filter(explode('/', $b)));
+        $lca = 0;
+        $n = min(\count($as), \count($bs));
+        for ($i = 0; $i < $n; ++$i) {
+            if ($as[$i] !== $bs[$i]) {
+                break;
+            }
+            ++$lca;
+        }
+
+        return (\count($as) - $lca) + (\count($bs) - $lca);
+    }
+
+    private function computeCouplingAndCohesion(array &$coupling): void
+    {
+        $maxChanges = max(array_column($coupling, 'changes')) ?: 1;
+
+        foreach ($coupling as &$files) {
+            $files['distance'] = $this->pathDistance(
+                $files['files'][0],
+                $files['files'][1]
+            );
+        }
+
+        $maxDistance = max(array_column($coupling, 'distance')) ?: 1;
+
+        foreach ($coupling as &$files) {
+            $files['cohesion'] = ($files['changes'] / $maxChanges) * (1 - $files['distance'] / $maxDistance);
+            $files['coupling'] = ($files['changes'] / $maxChanges) * ($files['distance'] / $maxDistance);
+        }
     }
 }

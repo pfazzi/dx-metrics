@@ -13,6 +13,32 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class Analyze extends Command
 {
+    public function execute(InputInterface $input, OutputInterface $output): int
+    {
+        [$repoPath, $since, $until, $threshold, $filter] = $this->getParams($input);
+
+        $git = new Git($repoPath);
+        $analyzer = new Analyzer($git);
+
+        $coupling = $this->computeCoupling($analyzer, $since, $until, $threshold, $filter);
+
+        $this->renderOutput($output, $coupling);
+
+        $this->plotOutput($coupling);
+
+        return Command::SUCCESS;
+    }
+
+    protected function configure(): void
+    {
+        $this->setName('analyze')
+            ->addArgument('path', InputArgument::REQUIRED)
+            ->addOption('since', 's', InputOption::VALUE_OPTIONAL, default: null)
+            ->addOption('until', 'u', InputOption::VALUE_OPTIONAL, default: null)
+            ->addOption('threshold', 't', InputOption::VALUE_OPTIONAL, default: 0)
+            ->addOption('filter', 'f', InputOption::VALUE_OPTIONAL, default: null);
+    }
+
     private function renderOutput(OutputInterface $output, array $coupling): void
     {
         $table = new Table($output);
@@ -82,32 +108,6 @@ class Analyze extends Command
         $filter = $input->getOption('filter');
 
         return [$repoPath, $since, $until, $threshold, $filter];
-    }
-
-    protected function configure(): void
-    {
-        $this->setName('analyze')
-            ->addArgument('path', InputArgument::REQUIRED)
-            ->addOption('since', 's', InputOption::VALUE_OPTIONAL, default: null)
-            ->addOption('until', 'u', InputOption::VALUE_OPTIONAL, default: null)
-            ->addOption('threshold', 't', InputOption::VALUE_OPTIONAL, default: 0)
-            ->addOption('filter', 'f', InputOption::VALUE_OPTIONAL, default: null);
-    }
-
-    public function execute(InputInterface $input, OutputInterface $output): int
-    {
-        [$repoPath, $since, $until, $threshold, $filter] = $this->getParams($input);
-
-        $git = new Git($repoPath);
-        $analyzer = new Analyzer($git);
-
-        $coupling = $this->computeCoupling($analyzer, $since, $until, $threshold, $filter);
-
-        $this->renderOutput($output, $coupling);
-
-        $this->plotOutput($coupling);
-
-        return Command::SUCCESS;
     }
 
     private function plotOutput(array $coupling): void

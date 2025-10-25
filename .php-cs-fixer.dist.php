@@ -11,6 +11,7 @@ return (new PhpCsFixer\Config())
         '@Symfony:risky' => true,
         'php_unit_method_casing' => ['case' => 'snake_case'],
         'php_unit_attributes' => true,
+        'ordered_class_elements' => true,
     ])
     ->setRiskyAllowed(true)
     ->setFinder($finder)

@@ -12,6 +12,11 @@ trait GitTestTrait
 
     private string $repoPath;
 
+    public function getCommitShaList(string $repoPath): array
+    {
+        return $this->runCommand('git rev-parse HEAD', $repoPath);
+    }
+
     protected function commit(string $repoPath, \DateTimeImmutable $date, string $message, array $files): string
     {
         foreach ($files as $path => $content) {
@@ -58,11 +63,6 @@ trait GitTestTrait
     protected function cleanUpTestRepo(string $repoPath): void
     {
         $this->rrmdir($repoPath);
-    }
-
-    public function getCommitShaList(string $repoPath): array
-    {
-        return $this->runCommand('git rev-parse HEAD', $repoPath);
     }
 
     private function runWithEnv(string $cmd, string $cwd, array $env): void

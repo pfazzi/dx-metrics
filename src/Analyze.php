@@ -138,28 +138,14 @@ class Analyze extends Command
         exec('dot -Tpng coupling.dot -o coupling.png');
     }
 
-    public function pathDistance(string $a, string $b): float
-    {
-        $as = array_values(array_filter(explode('/', $a)));
-        $bs = array_values(array_filter(explode('/', $b)));
-        $lca = 0;
-        $n = min(\count($as), \count($bs));
-        for ($i = 0; $i < $n; ++$i) {
-            if ($as[$i] !== $bs[$i]) {
-                break;
-            }
-            ++$lca;
-        }
-
-        return (\count($as) - $lca) + (\count($bs) - $lca);
-    }
-
     private function computeCouplingAndCohesion(array &$coupling): void
     {
         $maxChanges = max(array_column($coupling, 'changes')) ?: 1;
 
+        $distance = new DistanceCalculator();
+
         foreach ($coupling as &$files) {
-            $files['distance'] = $this->pathDistance(
+            $files['distance'] = $distance->calc(
                 $files['files'][0],
                 $files['files'][1]
             );

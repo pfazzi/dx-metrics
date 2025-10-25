@@ -15,16 +15,20 @@ class Analyze extends Command
 {
     public function execute(InputInterface $input, OutputInterface $output): int
     {
-        [$repoPath, $since, $until, $threshold, $filter] = $this->getParams($input);
+        [$repoPath, $since, $until, $coChangesThreshold, $pathFilter] = $this->getParams($input);
 
         $git = new Git($repoPath);
         $analyzer = new Analyzer($git);
 
-        $coupling = $this->computeCoupling($analyzer, $since, $until, $threshold, $filter);
+        $analysisOutput = $analyzer->analyze($since, $until)
+            ->filterByPath($pathFilter)
+            ->filterByCoChangesThreshold($coChangesThreshold)
+            ->getUniqueFilePairs()
+            ->sortByCoChangesDesc();
 
-        $this->renderOutput($output, $coupling);
+        $this->printAnalysisOutput($output, $analysisOutput);
 
-        $this->plotOutput($coupling);
+        $this->plotAnalysisOutput($analysisOutput);
 
         return Command::SUCCESS;
     }
@@ -39,57 +43,20 @@ class Analyze extends Command
             ->addOption('filter', 'f', InputOption::VALUE_OPTIONAL, default: null);
     }
 
-    private function renderOutput(OutputInterface $output, array $coupling): void
+    private function printAnalysisOutput(OutputInterface $output, AnalysisOutput $analysisOutput): void
     {
         $table = new Table($output);
-        $table->setHeaders(['File', 'File', 'Changes', 'Distance', 'Coupling', 'Cohesion']);
+        $table->setHeaders(['Path A', 'Path B', 'Co-changes Count']);
 
-        foreach ($coupling as $filesCouple) {
+        foreach ($analysisOutput->items as $item) {
             $table->addRow([
-                $filesCouple['files'][0],
-                $filesCouple['files'][1],
-                $filesCouple['changes'],
-                $filesCouple['distance'],
-                number_format($filesCouple['coupling'], 3),
-                number_format($filesCouple['cohesion'], 3),
+                $item->pathA,
+                $item->pathB,
+                $item->coChangeCount,
             ]);
         }
 
         $table->render();
-    }
-
-    private function computeCoupling(Analyzer $analyzer, ?\DateTimeImmutable $since, ?\DateTimeImmutable $until, int $threshold, ?string $filter): array
-    {
-        $coupling = $analyzer->computeCoupling($since, $until);
-
-        // Filter unique pairs
-        $uniques = [];
-        foreach ($coupling as $filesCouple) {
-            if (!str_starts_with($filesCouple['files'][0], $filter)
-            || !str_starts_with($filesCouple['files'][1], $filter)) {
-                continue;
-            }
-
-            $keyA = $filesCouple['files'][0].$filesCouple['files'][1];
-            $keyB = $filesCouple['files'][1].$filesCouple['files'][0];
-            if (isset($uniques[$keyA]) || isset($uniques[$keyB])) {
-                continue;
-            }
-            $uniques[$keyA] = $filesCouple;
-        }
-        $coupling = array_values($uniques);
-
-        // Filter by threshold
-        if ($threshold > 0) {
-            $coupling = array_filter($coupling, fn ($c) => $c['changes'] > $threshold);
-        }
-
-        // Sort by changes
-        usort($coupling, fn ($a, $b) => $b['changes'] <=> $a['changes']);
-
-        $this->computeCouplingAndCohesion($coupling);
-
-        return $coupling;
     }
 
     private function getParams(InputInterface $input): array
@@ -110,18 +77,18 @@ class Analyze extends Command
         return [$repoPath, $since, $until, $threshold, $filter];
     }
 
-    private function plotOutput(array $coupling): void
+    private function plotAnalysisOutput(AnalysisOutput $analysisOutput): void
     {
-        $min = $coupling[array_key_last($coupling)]['changes'];
+        $min = $analysisOutput->items[array_key_last($analysisOutput->items)]->coChangeCount;
 
         $dot = "graph G {\n"
             ."  graph [overlap=false, splines=true];\n"
             ."  node [shape=box, fontsize=10];\n";
 
-        foreach ($coupling as $p) {
-            $a = addslashes($p['files'][0]);
-            $b = addslashes($p['files'][1]);
-            $w = $p['changes'];
+        foreach ($analysisOutput->items as $item) {
+            $a = addslashes($item->pathA);
+            $b = addslashes($item->pathB);
+            $w = $item->coChangeCount;
             $pen = $w * 2 / $min;
             $dot .= \sprintf(
                 "  \"%s\" -- \"%s\" [penwidth=%d, label=\"%d\"];\n",
@@ -136,26 +103,5 @@ class Analyze extends Command
         file_put_contents('coupling.dot', $dot);
 
         exec('dot -Tpng coupling.dot -o coupling.png');
-    }
-
-    private function computeCouplingAndCohesion(array &$coupling): void
-    {
-        $maxChanges = max(array_column($coupling, 'changes')) ?: 1;
-
-        $distance = new DistanceCalculator();
-
-        foreach ($coupling as &$files) {
-            $files['distance'] = $distance->calc(
-                $files['files'][0],
-                $files['files'][1]
-            );
-        }
-
-        $maxDistance = max(array_column($coupling, 'distance')) ?: 1;
-
-        foreach ($coupling as &$files) {
-            $files['cohesion'] = ($files['changes'] / $maxChanges) * (1 - $files['distance'] / $maxDistance);
-            $files['coupling'] = ($files['changes'] / $maxChanges) * ($files['distance'] / $maxDistance);
-        }
     }
 }

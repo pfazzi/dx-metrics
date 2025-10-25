@@ -10,7 +10,7 @@ readonly class Analyzer
     {
     }
 
-    public function computeCoupling(?\DateTimeImmutable $since = null, ?\DateTimeImmutable $until = null): array
+    public function analyze(?\DateTimeImmutable $since = null, ?\DateTimeImmutable $until = null): AnalysisOutput
     {
         $coupling = [];
 
@@ -25,16 +25,17 @@ readonly class Analyzer
                         continue;
                     }
 
-                    $coupling[$fileChangedLeft.$fileChangedRight] ??= [
-                        'files' => [$fileChangedLeft, $fileChangedRight],
-                        'changes' => 0,
-                    ];
+                    $coupling[$fileChangedLeft.$fileChangedRight] ??= new AnalysisOutputItem(
+                        $fileChangedLeft,
+                        $fileChangedRight,
+                        0,
+                    );
 
-                    ++$coupling[$fileChangedLeft.$fileChangedRight]['changes'];
+                    $coupling[$fileChangedLeft.$fileChangedRight]->coChangeCountIncrease();
                 }
             }
         }
 
-        return $coupling;
+        return new AnalysisOutput(...array_values($coupling));
     }
 }

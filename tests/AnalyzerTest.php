@@ -70,7 +70,7 @@ class AnalyzerTest extends TestCase
             ],
         );
 
-        $coupling = $analyzer->computeCoupling();
+        $coupling = $analyzer->analyze();
 
         self::assertEqualsCanonicalizing([
             [

@@ -58,7 +58,7 @@ readonly class AnalysisOutput
 
         $analysisOutputItems = array_filter(
             $this->items,
-            fn ($c) => $c->coChangeCount >= $threshold
+            static fn ($c) => $c->coChangeCount >= $threshold
         );
 
         return new self(...array_values($analysisOutputItems));
@@ -69,7 +69,7 @@ readonly class AnalysisOutput
     {
         $items = array_values($this->items);
 
-        usort($items, fn (AnalysisOutputItem $a, AnalysisOutputItem $b) => $b->coChangeCount <=> $a->coChangeCount);
+        usort($items, static fn (AnalysisOutputItem $a, AnalysisOutputItem $b) => $b->coChangeCount <=> $a->coChangeCount);
 
         return new self(...array_values($items));
     }

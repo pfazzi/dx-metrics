@@ -67,7 +67,7 @@ trait GitTestTrait
 
     private function runWithEnv(string $cmd, string $cwd, array $env): void
     {
-        $envPairs = array_map(fn ($k, $v) => "$k=$v", array_keys($env), array_values($env));
+        $envPairs = array_map(static fn ($k, $v) => "$k=$v", array_keys($env), array_values($env));
         $full = implode(' ', array_map('escapeshellarg', $envPairs)).' '.$cmd;
         // più portabile: setta env per il process
         $descriptorspec = [

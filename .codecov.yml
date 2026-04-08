@@ -1,0 +1,17 @@
+coverage:
+  precision: 2
+  round: down
+  status:
+    project:
+      default:
+        target: auto      # baseline = current coverage on main
+        threshold: 1%     # allow up to 1% drop without failing
+    patch:
+      default:
+        target: auto
+        threshold: 1%
+
+comment:
+  layout: "reach,diff,files"
+  behavior: default
+  require_changes: false  # always comment, even if coverage is unchanged

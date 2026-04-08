@@ -71,13 +71,14 @@ class AnalyzerTest extends TestCase
             ],
         );
 
-        $coupling = $analyzer->analyze();
+        $items = $analyzer->analyze()->items;
+        usort($items, static fn ($a, $b) => ($a->pathA.$a->pathB) <=> ($b->pathA.$b->pathB));
 
-        self::assertEqualsCanonicalizing([
+        self::assertEquals([
+            new AnalysisOutputItem('src/Invoice.php', 'src/Order.php', 2),
             new AnalysisOutputItem('src/Order.php', 'src/Invoice.php', 2),
             new AnalysisOutputItem('src/Order.php', 'src/User.php', 1),
-            new AnalysisOutputItem('src/Invoice.php', 'src/Order.php', 2),
             new AnalysisOutputItem('src/User.php', 'src/Order.php', 1),
-        ], $coupling->items);
+        ], $items);
     }
 }

@@ -11,8 +11,10 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
+/** @psalm-suppress UnusedClass */
 class Analyze extends Command
 {
+    #[\Override]
     public function execute(InputInterface $input, OutputInterface $output): int
     {
         [$repoPath, $since, $until, $coChangesThreshold, $pathFilter] = $this->getParams($input);
@@ -33,6 +35,7 @@ class Analyze extends Command
         return Command::SUCCESS;
     }
 
+    #[\Override]
     protected function configure(): void
     {
         $this->setName('analyze')

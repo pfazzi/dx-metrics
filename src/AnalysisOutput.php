@@ -64,6 +64,7 @@ readonly class AnalysisOutput
         return new self(...array_values($analysisOutputItems));
     }
 
+    /** @psalm-suppress PossiblyUnusedMethod */
     public function sortByCoChangesDesc(): self
     {
         $items = array_values($this->items);

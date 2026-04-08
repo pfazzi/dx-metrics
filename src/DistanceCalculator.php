@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Pfazzi\DxMetrics;
 
+/** @psalm-suppress UnusedClass */
 final class DistanceCalculator
 {
     /**

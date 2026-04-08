@@ -79,7 +79,14 @@ class Analyze extends Command
 
     private function plotAnalysisOutput(AnalysisOutput $analysisOutput): void
     {
+        if ([] === $analysisOutput->items) {
+            return;
+        }
+
         $min = $analysisOutput->items[array_key_last($analysisOutput->items)]->coChangeCount;
+        if (0 === $min) {
+            return;
+        }
 
         $dot = "graph G {\n"
             ."  graph [overlap=false, splines=true];\n"

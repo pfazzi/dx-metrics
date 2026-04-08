@@ -1,5 +1,7 @@
 # dx-metrics
 
+[![codecov](https://codecov.io/gh/pfazzi/dx-metrics/branch/main/graph/badge.svg)](https://codecov.io/gh/pfazzi/dx-metrics)
+
 CLI tool for **temporal coupling analysis** of Git repositories — identifies which files are frequently changed together in the same commits.
 
 ## Installation

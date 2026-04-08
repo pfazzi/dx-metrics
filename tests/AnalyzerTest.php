@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Pfazzi\DxMetrics\Tests;
 
+use Pfazzi\DxMetrics\AnalysisOutputItem;
 use Pfazzi\DxMetrics\Analyzer;
 use Pfazzi\DxMetrics\Git;
 use PHPUnit\Framework\TestCase;
@@ -73,22 +74,10 @@ class AnalyzerTest extends TestCase
         $coupling = $analyzer->analyze();
 
         self::assertEqualsCanonicalizing([
-            [
-                'files' => ['src/Order.php', 'src/Invoice.php'],
-                'changes' => 2,
-            ],
-            [
-                'files' => ['src/Order.php', 'src/User.php'],
-                'changes' => 1,
-            ],
-            [
-                'files' => ['src/Invoice.php', 'src/Order.php'],
-                'changes' => 2,
-            ],
-            [
-                'files' => ['src/User.php', 'src/Order.php'],
-                'changes' => 1,
-            ],
-        ], $coupling);
+            new AnalysisOutputItem('src/Order.php', 'src/Invoice.php', 2),
+            new AnalysisOutputItem('src/Order.php', 'src/User.php', 1),
+            new AnalysisOutputItem('src/Invoice.php', 'src/Order.php', 2),
+            new AnalysisOutputItem('src/User.php', 'src/Order.php', 1),
+        ], $coupling->items);
     }
 }

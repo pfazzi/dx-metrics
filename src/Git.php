@@ -24,11 +24,11 @@ readonly class Git
         $command = 'git rev-list --all';
 
         if ($since) {
-            $command .= " --since=\"{$since->format('Y-m-d')}\"";
+            $command .= " --since=\"{$since->format('Y-m-d 00:00:00')}\"";
         }
 
         if ($until) {
-            $command .= " --until=\"{$until->format('Y-m-d')}\"";
+            $command .= " --until=\"{$until->format('Y-m-d 23:59:59')}\"";
         }
 
         return $this->runCommand($command, $this->repoPath);

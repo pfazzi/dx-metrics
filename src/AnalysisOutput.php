@@ -32,6 +32,10 @@ readonly class AnalysisOutput
 
     public function filterByPath(?string $filter): self
     {
+        if (null === $filter) {
+            return $this;
+        }
+
         $filtered = [];
 
         foreach ($this->items as $item) {

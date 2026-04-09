@@ -41,7 +41,11 @@ readonly class TeamConfig
         return $this->emailToTeam[strtolower($email)] ?? 'unknown';
     }
 
-    /** @return string[] */
+    /**
+     * @psalm-suppress PossiblyUnusedMethod
+     *
+     * @return string[]
+     */
     public function getTeamNames(): array
     {
         return array_values(array_unique(array_values($this->emailToTeam)));

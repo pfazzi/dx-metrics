@@ -17,7 +17,7 @@ trait GitTestTrait
         return $this->runCommand('git rev-parse HEAD', $repoPath);
     }
 
-    protected function commit(string $repoPath, \DateTimeImmutable $date, string $message, array $files): string
+    protected function commit(string $repoPath, \DateTimeImmutable $date, string $message, array $files, ?string $authorEmail = null): string
     {
         foreach ($files as $path => $content) {
             $this->append($repoPath.$path, $content);
@@ -25,11 +25,21 @@ trait GitTestTrait
 
         $this->runCommand('git add -A', $repoPath);
 
+        $env = [
+            'GIT_AUTHOR_DATE' => $date->format(\DATE_ATOM),
+            'GIT_COMMITTER_DATE' => $date->format(\DATE_ATOM),
+        ];
+
+        if (null !== $authorEmail) {
+            $env['GIT_AUTHOR_EMAIL'] = $authorEmail;
+            $env['GIT_COMMITTER_EMAIL'] = $authorEmail;
+        }
+
         $message = escapeshellarg($message);
         $this->runWithEnv(
             "git commit -qm \"{$message}\"",
             $repoPath,
-            ['GIT_AUTHOR_DATE' => $date->format(\DATE_ATOM), 'GIT_COMMITTER_DATE' => $date->format(\DATE_ATOM)],
+            $env,
         );
 
         $commitSha = $this->runCommand('git rev-parse HEAD', $repoPath);

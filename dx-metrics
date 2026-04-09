@@ -5,10 +5,12 @@
 require __DIR__.'/vendor/autoload.php';
 
 use Pfazzi\DxMetrics\Analyze;
+use Pfazzi\DxMetrics\SharedOwnership;
 use Symfony\Component\Console\Application;
 
 $application = new Application();
 
 $application->add(new Analyze());
+$application->add(new SharedOwnership());
 
 $application->run();

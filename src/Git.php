@@ -19,6 +19,36 @@ readonly class Git
         return $this->runCommand($command, $this->repoPath);
     }
 
+    /**
+     * Returns commits as [['sha' => string, 'email' => string], ...].
+     *
+     * @return array<int, array{sha: string, email: string}>
+     */
+    public function getCommitsWithAuthorEmail(?\DateTimeImmutable $since = null, ?\DateTimeImmutable $until = null): array
+    {
+        $command = 'git log --all --format="%H %ae"';
+
+        if ($since) {
+            $command .= " --since=\"{$since->format('Y-m-d 00:00:00')}\"";
+        }
+        if ($until) {
+            $command .= " --until=\"{$until->format('Y-m-d 23:59:59')}\"";
+        }
+
+        $lines = $this->runCommand($command, $this->repoPath);
+
+        $commits = [];
+        foreach ($lines as $line) {
+            if ('' === $line) {
+                continue;
+            }
+            [$sha, $email] = explode(' ', $line, 2);
+            $commits[] = ['sha' => $sha, 'email' => trim($email)];
+        }
+
+        return $commits;
+    }
+
     public function getCommitsSha(?\DateTimeImmutable $since = null, ?\DateTimeImmutable $until = null): array
     {
         $command = 'git rev-list --all';

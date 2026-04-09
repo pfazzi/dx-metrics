@@ -76,7 +76,7 @@ class SharedOwnershipInitCommandTest extends TestCase
         $tester = $this->executeCommand(['path' => $this->repoPath]);
 
         $data = json_decode($tester->getDisplay(), true);
-        self::assertCount(1, array_filter($data['_unassigned'], fn ($e) => 'alice@example.com' === $e));
+        self::assertCount(1, array_filter($data['_unassigned'], static fn ($e) => 'alice@example.com' === $e));
     }
 
     public function test_authors_are_normalized_to_lowercase(): void
@@ -125,7 +125,7 @@ class SharedOwnershipInitCommandTest extends TestCase
         $this->commit($this->repoPath, new \DateTimeImmutable('2024-01-01T12:00:00+0000'),
             'feat: alice', ['/src/A.php' => "v1\n"], 'alice@example.com');
 
-        $outputFile = sys_get_temp_dir() . '/teams-init-' . bin2hex(random_bytes(4)) . '.json';
+        $outputFile = sys_get_temp_dir().'/teams-init-'.bin2hex(random_bytes(4)).'.json';
         try {
             $tester = $this->executeCommand(['path' => $this->repoPath, '--output' => $outputFile]);
 

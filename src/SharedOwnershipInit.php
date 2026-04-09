@@ -48,11 +48,11 @@ class SharedOwnershipInit extends Command
             '_unassigned' => $unassigned,
         ];
 
-        $json = json_encode($template, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n";
+        $json = json_encode($template, \JSON_PRETTY_PRINT | \JSON_UNESCAPED_SLASHES)."\n";
 
         if (null !== $outputFile) {
             file_put_contents($outputFile, $json);
-            $output->writeln(\sprintf('Teams template written to <info>%s</info> (%d authors found).', $outputFile, count($unassigned)));
+            $output->writeln(\sprintf('Teams template written to <info>%s</info> (%d authors found).', $outputFile, \count($unassigned)));
             $output->writeln('Edit the file: move emails from <comment>_unassigned</comment> into your team arrays, then rename the team keys.');
         } else {
             $output->write($json);

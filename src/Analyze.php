@@ -90,9 +90,6 @@ class Analyze extends Command
         }
 
         $min = $analysisOutput->items[array_key_last($analysisOutput->items)]->coChangeCount;
-        if (0 === $min) {
-            return;
-        }
 
         $dot = "graph G {\n"
             ."  graph [overlap=false, splines=true];\n"
@@ -113,8 +110,11 @@ class Analyze extends Command
         }
         $dot .= "}\n";
 
-        file_put_contents($outputDir.'/coupling.dot', $dot);
+        $dotFile = $outputDir.'/coupling.dot';
+        $pngFile = $outputDir.'/coupling.png';
 
-        exec("dot -Tpng {$outputDir}/coupling.dot -o {$outputDir}/coupling.png");
+        file_put_contents($dotFile, $dot);
+
+        exec('dot -Tpng '.escapeshellarg($dotFile).' -o '.escapeshellarg($pngFile));
     }
 }

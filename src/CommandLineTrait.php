@@ -27,6 +27,8 @@ trait CommandLineTrait
             throw new \RuntimeException("Command failed ($code): $cmd\n$err");
         }
 
-        return explode(\PHP_EOL, trim($out));
+        $trimmed = trim($out);
+
+        return '' === $trimmed ? [] : explode(\PHP_EOL, $trimmed);
     }
 }

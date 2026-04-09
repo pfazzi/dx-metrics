@@ -14,7 +14,7 @@ final class DistanceCalculator
      * Esempi:
      *  - a: "src/Foo/Bar.php", b: "src/Foo/Baz.php"       => 0
      *  - a: "src/Foo/Bar.php", b: "src/Baz/Qux.php"       => 2  (Foo -> src) + (src -> Baz)
-     *  - a: "src/App/X.php",   b: "tests/Unit/XTest.php"  => 3  (App->src, src->., .->tests) + (tests->Unit)
+     *  - a: "src/App/X.php",   b: "tests/Unit/XTest.php"  => 4  (App↑, src↑) + (tests↓, Unit↓)
      *
      * Nota: non richiede che i path esistano sul filesystem.
      */

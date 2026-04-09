@@ -17,7 +17,7 @@ class Analyze extends Command
     #[\Override]
     public function execute(InputInterface $input, OutputInterface $output): int
     {
-        [$repoPath, $since, $until, $coChangesThreshold, $pathFilter] = $this->getParams($input);
+        [$repoPath, $since, $until, $coChangesThreshold, $pathFilter, $outputDir] = $this->getParams($input);
 
         $git = new Git($repoPath);
         $analyzer = new Analyzer($git);
@@ -30,7 +30,7 @@ class Analyze extends Command
 
         $this->printAnalysisOutput($output, $analysisOutput);
 
-        $this->plotAnalysisOutput($analysisOutput);
+        $this->plotAnalysisOutput($outputDir, $analysisOutput);
 
         return Command::SUCCESS;
     }
@@ -43,7 +43,8 @@ class Analyze extends Command
             ->addOption('since', 's', InputOption::VALUE_OPTIONAL, default: null)
             ->addOption('until', 'u', InputOption::VALUE_OPTIONAL, default: null)
             ->addOption('threshold', 't', InputOption::VALUE_OPTIONAL, default: 0)
-            ->addOption('filter', 'f', InputOption::VALUE_OPTIONAL, default: null);
+            ->addOption('filter', 'f', InputOption::VALUE_OPTIONAL, default: null)
+            ->addOption('output-dir', 'o', InputOption::VALUE_OPTIONAL, default: null);
     }
 
     private function printAnalysisOutput(OutputInterface $output, AnalysisOutput $analysisOutput): void
@@ -77,10 +78,12 @@ class Analyze extends Command
 
         $filter = $input->getOption('filter');
 
-        return [$repoPath, $since, $until, $threshold, $filter];
+        $outputDir = $input->getOption('output-dir') ?? (string) getcwd();
+
+        return [$repoPath, $since, $until, $threshold, $filter, $outputDir];
     }
 
-    private function plotAnalysisOutput(AnalysisOutput $analysisOutput): void
+    private function plotAnalysisOutput(string $outputDir, AnalysisOutput $analysisOutput): void
     {
         if ([] === $analysisOutput->items) {
             return;
@@ -110,8 +113,8 @@ class Analyze extends Command
         }
         $dot .= "}\n";
 
-        file_put_contents('coupling.dot', $dot);
+        file_put_contents($outputDir.'/coupling.dot', $dot);
 
-        exec('dot -Tpng coupling.dot -o coupling.png');
+        exec("dot -Tpng {$outputDir}/coupling.dot -o {$outputDir}/coupling.png");
     }
 }

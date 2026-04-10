@@ -69,7 +69,7 @@ class SharedOwnershipInit extends Command
     #[\Override]
     protected function configure(): void
     {
-        $this->setName('shared-ownership:init')
+        $this->setName('ownership:init')
             ->setDescription('Scaffold a teams JSON config from git author history')
             ->addArgument('path', InputArgument::REQUIRED, 'Path to the git repository')
             ->addOption('output', 'o', InputOption::VALUE_OPTIONAL, 'Write the template to this file instead of stdout', null)

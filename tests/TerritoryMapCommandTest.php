@@ -181,7 +181,7 @@ class TerritoryMapCommandTest extends TestCase
     {
         $app = new Application();
         $app->add(new TerritoryMap());
-        $tester = new CommandTester($app->find('territory-map'));
+        $tester = new CommandTester($app->find('coupling:map'));
         $tester->execute($args);
 
         return $tester;

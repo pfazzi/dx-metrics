@@ -105,7 +105,7 @@ class DxMetricsConfigTest extends TestCase
 
         $app = new Application();
         $app->add(new OwnershipHotspots());
-        $tester = new CommandTester($app->find('ownership-hotspots'));
+        $tester = new CommandTester($app->find('ownership:hotspots'));
         // Pass --teams=cli-teams.json explicitly — this must override the config file value
         $tester->execute(['path' => $repoPath, '--teams' => $teamsFile]);
 

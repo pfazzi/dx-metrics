@@ -80,7 +80,7 @@ final class CouplingTrend extends Command
     #[\Override]
     protected function configure(): void
     {
-        $this->setName('coupling-trend')
+        $this->setName('coupling:trend')
             ->setDescription('Track cross-team coupling index over time at company, team, and pair level')
             ->addArgument('path', InputArgument::REQUIRED, 'Path to the git repository')
             ->addOption('teams', 'T', InputOption::VALUE_REQUIRED, 'Path to teams JSON config file')

@@ -219,7 +219,7 @@ class SharedOwnershipCommandTest extends TestCase
     {
         $app = new Application();
         $app->add(new SharedOwnership());
-        $tester = new CommandTester($app->find('shared-ownership'));
+        $tester = new CommandTester($app->find('ownership:list'));
         $tester->execute($args);
 
         return $tester;

@@ -46,7 +46,7 @@ class Analyze extends Command
     #[\Override]
     protected function configure(): void
     {
-        $this->setName('analyze')
+        $this->setName('coupling:analyze')
             ->setDescription('Find files that change together across commits (volatility coupling)')
             ->addArgument('path', InputArgument::REQUIRED)
             ->addOption('since', 's', InputOption::VALUE_OPTIONAL, default: null)

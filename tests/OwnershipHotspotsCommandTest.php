@@ -179,7 +179,7 @@ class OwnershipHotspotsCommandTest extends TestCase
     {
         $app = new Application();
         $app->add(new OwnershipHotspots());
-        $tester = new CommandTester($app->find('ownership-hotspots'));
+        $tester = new CommandTester($app->find('ownership:hotspots'));
         $tester->execute($args);
 
         return $tester;

@@ -17,6 +17,13 @@ final class OwnershipHotspots extends Command
     #[\Override]
     public function execute(InputInterface $input, OutputInterface $output): int
     {
+        $output->writeln('<options=bold>Ownership Hotspots</>');
+        $output->writeln('');
+        $output->writeln('Ranks files with ambiguous team ownership by urgency.');
+        $output->writeln('<comment>Risk Score</comment> = entropy × total commits: a file frequently changed by multiple teams scores higher than a rarely-touched one with the same entropy split.');
+        $output->writeln('Start from the top: high-scoring files represent the greatest hidden coordination cost between teams and are the best candidates for an ownership clarification conversation.');
+        $output->writeln('');
+
         $teamsFile = $input->getOption('teams');
         if (null === $teamsFile) {
             $output->writeln('<error>The --teams option is required.</error>');

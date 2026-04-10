@@ -17,6 +17,13 @@ class Analyze extends Command
     #[\Override]
     public function execute(InputInterface $input, OutputInterface $output): int
     {
+        $output->writeln('<options=bold>Temporal Coupling Analysis</>');
+        $output->writeln('');
+        $output->writeln('Counts how often pairs of files are modified in the same commit.');
+        $output->writeln('A high <comment>Co-changes Count</comment> means that changing one file almost always requires changing the other — a hidden dependency that increases coordination cost and regression risk.');
+        $output->writeln('Pairs with strong coupling across module or team boundaries are prime candidates for decoupling or explicit interface extraction.');
+        $output->writeln('');
+
         [$repoPath, $since, $until, $coChangesThreshold, $pathFilter, $outputDir] = $this->getParams($input);
 
         $git = new Git($repoPath);

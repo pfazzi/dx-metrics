@@ -166,6 +166,7 @@ Start with `--depth=2` and adjust until the granularity matches your architectur
 | `--teams` | `-T` | Path to the teams JSON config file (required) |
 | `--depth` | `-d` | Number of path segments that define a module (default: 2) |
 | `--filter` | `-f` | Only include files matching this path prefix (e.g. `src/`) |
+| `--min-coupling` | `-c` | Hide cross-team edges below this co-change count (default: 0) |
 | `--since` | `-s` | Include commits after this date (e.g. `2024-01-01`) |
 | `--until` | `-u` | Include commits before this date (e.g. `2024-12-31`) |
 | `--exclude` | | Exclude files matching this glob pattern (repeatable, e.g. `--exclude='.sqlx/*'`) |
@@ -192,9 +193,12 @@ This prints a summary table to stdout and writes `territory.dot` and `territory.
 
 ### Reading the graph
 
-- **Node colour** → dominant team for that module. The legend in the image shows the team-to-colour mapping.
-- **Edge thickness and label** → number of commits that modified files in both modules. Thicker = more coupling.
-- **Same colour, thick edge** → internal coupling within a team's territory. Usually fine.
-- **Different colours, thick edge** → cross-team coupling. Two teams are coordinating implicitly — worth an explicit conversation about boundaries or interfaces.
+Modules are grouped into **boxes by dominant team**. Each box background is the team's colour.
 
-A module with high entropy *and* thick edges to other teams is a double signal: no one clearly owns it, and everyone is forced to touch it together.
+- **Red edges** → cross-team volatility coupling (Conway's Law violations). These are the only edges shown — same-team coupling is hidden to keep the image readable.
+- **Edge thickness and label** → number of commits that touched files in both modules. Thicker = stronger implicit coordination cost.
+- **Node label** → module name, ownership entropy, and total commits.
+
+Use `--min-coupling=N` to hide weak cross-team edges and focus on the most significant violations.
+
+A module with high entropy *and* thick red edges to other teams is a double signal: no one clearly owns it, and multiple teams are forced to touch it together.

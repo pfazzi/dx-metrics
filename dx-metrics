@@ -8,6 +8,7 @@ use Pfazzi\DxMetrics\Analyze;
 use Pfazzi\DxMetrics\CodeownersDrift;
 use Pfazzi\DxMetrics\CodeownersSuggest;
 use Pfazzi\DxMetrics\CouplingTrend;
+use Pfazzi\DxMetrics\Init;
 use Pfazzi\DxMetrics\OwnershipGaps;
 use Pfazzi\DxMetrics\OwnershipHotspots;
 use Pfazzi\DxMetrics\OwnershipTrend;
@@ -18,6 +19,7 @@ use Symfony\Component\Console\Application;
 
 $application = new Application();
 
+$application->add(new Init());
 $application->add(new Analyze());
 $application->add(new SharedOwnership());
 $application->add(new SharedOwnershipInit());

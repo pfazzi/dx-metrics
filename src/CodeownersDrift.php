@@ -33,8 +33,15 @@ final class CodeownersDrift extends Command
         }
 
         $repoPath = $input->getArgument('path');
-        $codeownersPath = $input->getOption('codeowners') ?? ($repoPath.'/.github/CODEOWNERS');
+        $codeownersPath = $input->getOption('codeowners') ?? $this->findCodeowners($repoPath);
         $excludePatterns = $input->getOption('exclude');
+        $filter = $input->getOption('filter');
+
+        if (null === $codeownersPath) {
+            $output->writeln('<error>No CODEOWNERS file found. Checked: CODEOWNERS, .github/CODEOWNERS, docs/CODEOWNERS</error>');
+
+            return Command::FAILURE;
+        }
 
         if (!file_exists($codeownersPath)) {
             $output->writeln(\sprintf('<error>CODEOWNERS file not found: %s</error>', $codeownersPath));
@@ -57,6 +64,10 @@ final class CodeownersDrift extends Command
 
         if ([] !== $excludePatterns) {
             $ownership = $ownership->filterByExcludedPatterns($excludePatterns);
+        }
+
+        if (null !== $filter) {
+            $ownership = $ownership->filterByPath($filter);
         }
 
         /** @var array<string, array<string, int>> $fileTeamCounts filePath → [team → commits] */
@@ -123,10 +134,26 @@ final class CodeownersDrift extends Command
             ->setDescription('Compare CODEOWNERS declared ownership against recent commit history')
             ->addArgument('path', InputArgument::REQUIRED, 'Path to the git repository')
             ->addOption('teams', 'T', InputOption::VALUE_REQUIRED, 'Path to teams JSON config file')
-            ->addOption('codeowners', null, InputOption::VALUE_OPTIONAL, 'Path to CODEOWNERS file (default: <repo>/.github/CODEOWNERS)', null)
+            ->addOption('codeowners', null, InputOption::VALUE_OPTIONAL, 'Path to CODEOWNERS file (auto-detected if omitted)', null)
+            ->addOption('filter', 'f', InputOption::VALUE_OPTIONAL, 'Only include files matching this path prefix (e.g. src/)', default: null)
             ->addOption('since', 's', InputOption::VALUE_OPTIONAL, 'Start of the commit window (default: 6 months ago)', null)
             ->addOption('until', 'u', InputOption::VALUE_OPTIONAL, 'End of the commit window (default: today)', null)
             ->addOption('exclude', null, InputOption::VALUE_IS_ARRAY | InputOption::VALUE_REQUIRED, default: []);
+    }
+
+    /**
+     * Checks the three locations GitHub recognises, in priority order.
+     */
+    private function findCodeowners(string $repoPath): ?string
+    {
+        foreach (['CODEOWNERS', '.github/CODEOWNERS', 'docs/CODEOWNERS'] as $relative) {
+            $full = rtrim($repoPath, '/').'/'.$relative;
+            if (file_exists($full)) {
+                return $full;
+            }
+        }
+
+        return null;
     }
 
     /**

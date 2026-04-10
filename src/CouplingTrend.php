@@ -20,9 +20,10 @@ final class CouplingTrend extends Command
         $output->writeln('<options=bold>Coupling Trend</>');
         $output->writeln('');
         $output->writeln('Tracks cross-team volatility coupling over time, divided into equal periods.');
-        $output->writeln('<comment>Company Index</comment> is the fraction of all co-changes that crossed a team boundary: 0 = all changes are team-internal, 1 = every co-change involved two teams. A rising index means the overall coordination cost is growing.');
-        $output->writeln('<comment>Team Score</comment> is the same ratio scoped to a single team: how much of its co-change activity spilled into other teams\' code.');
-        $output->writeln('Use the pair table to identify which specific team relationship is driving a trend.');
+        $output->writeln('A <comment>co-change</comment> is counted every time two files are modified in the same commit. When those files belong to different teams it becomes a <comment>cross-team co-change</comment> — a signal that two teams had to touch the codebase together, even if no one explicitly coordinated it.');
+        $output->writeln('<comment>Company Index</comment> = cross-team co-changes ÷ total co-changes. 0 means every change stayed inside one team\'s code; 1 means every co-change crossed a team boundary. A rising index means coordination cost is spreading across the company.');
+        $output->writeln('<comment>Team Score</comment> is the same ratio scoped to a single team: what fraction of that team\'s co-change activity involved another team\'s code.');
+        $output->writeln('The pair tables show the raw cross-team co-change count for each team pair over time — use them to trace which specific relationship is driving a company-level trend.');
         $output->writeln('');
 
         $teamsFile = $input->getOption('teams');
@@ -131,7 +132,7 @@ final class CouplingTrend extends Command
         $output->writeln('<options=bold>Company coupling index</>');
 
         $table = new Table($output);
-        $table->setHeaders(['Period', 'Total Co-Changes', 'Cross-Team', 'Index', 'Trend']);
+        $table->setHeaders(['Period', 'Total Co-Changes', 'Cross-Team Co-Changes', 'Index', 'Trend']);
 
         $prevIndex = null;
         foreach ($periods as $period) {
@@ -188,40 +189,46 @@ final class CouplingTrend extends Command
     {
         $output->writeln('<options=bold>Team-pair coupling</>');
 
-        // Collect all pairs across all periods, sorted
-        $pairs = [];
+        // Collect all pairs, sort by total coupling descending (most coupled first)
+        $pairTotals = [];
         foreach ($periods as $period) {
-            foreach (array_keys($period->teamPairCoChanges) as $key) {
-                $pairs[$key] = true;
+            foreach ($period->teamPairCoChanges as $key => $count) {
+                $pairTotals[$key] = ($pairTotals[$key] ?? 0) + $count;
             }
         }
-        $pairKeys = array_keys($pairs);
-        sort($pairKeys);
+        arsort($pairTotals);
+        $pairKeys = array_keys($pairTotals);
 
-        // Build human-readable pair labels
-        $pairLabels = array_map(
-            static fn (string $k) => str_replace('|||', ' ↔ ', $k),
-            $pairKeys,
-        );
+        if ([] === $pairKeys) {
+            $output->writeln('No cross-team co-changes found in the selected range.');
 
-        $table = new Table($output);
-        $table->setHeaders(['Period', ...$pairLabels]);
+            return;
+        }
 
-        $prevCounts = [];
-        foreach ($periods as $period) {
-            $row = [$period->periodLabel()];
-            foreach ($pairKeys as $key) {
+        // One small table per pair
+        foreach ($pairKeys as $key) {
+            $label = str_replace('|||', ' ↔ ', $key);
+            $output->writeln('');
+            $output->writeln(\sprintf('<comment>%s</comment>', $label));
+
+            $table = new Table($output);
+            $table->setHeaders(['Period', 'Co-Changes', 'Trend']);
+
+            $prevCount = null;
+            foreach ($periods as $period) {
                 $count = $period->teamPairCoChanges[$key] ?? null;
-                $cell = null !== $count
-                    ? $count.' '.$this->trend($prevCounts[$key] ?? null, (float) $count)
-                    : '—';
-                $row[] = $cell;
+                $table->addRow([
+                    $period->periodLabel(),
+                    null !== $count ? (string) $count : '—',
+                    null !== $count ? $this->trend($prevCount, (float) $count) : '',
+                ]);
+                if (null !== $count) {
+                    $prevCount = (float) $count;
+                }
             }
-            $table->addRow($row);
-            $prevCounts = $period->teamPairCoChanges;
-        }
 
-        $table->render();
+            $table->render();
+        }
     }
 
     private function trend(?float $prev, float $current): string

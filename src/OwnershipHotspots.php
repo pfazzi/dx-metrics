@@ -87,6 +87,7 @@ final class OwnershipHotspots extends Command
     protected function configure(): void
     {
         $this->setName('ownership-hotspots')
+            ->setDescription('Rank multi-team files by risk score (entropy × commits) to prioritise ownership conversations')
             ->addArgument('path', InputArgument::REQUIRED)
             ->addOption('teams', 'T', InputOption::VALUE_REQUIRED)
             ->addOption('since', 's', InputOption::VALUE_OPTIONAL, default: null)

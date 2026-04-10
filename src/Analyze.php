@@ -17,7 +17,7 @@ class Analyze extends Command
     #[\Override]
     public function execute(InputInterface $input, OutputInterface $output): int
     {
-        $output->writeln('<options=bold>Temporal Coupling Analysis</>');
+        $output->writeln('<options=bold>Volatility Coupling Analysis</>');
         $output->writeln('');
         $output->writeln('Counts how often pairs of files are modified in the same commit.');
         $output->writeln('A high <comment>Co-changes Count</comment> means that changing one file almost always requires changing the other — a hidden dependency that increases coordination cost and regression risk.');
@@ -47,6 +47,7 @@ class Analyze extends Command
     protected function configure(): void
     {
         $this->setName('analyze')
+            ->setDescription('Find files that change together across commits (volatility coupling)')
             ->addArgument('path', InputArgument::REQUIRED)
             ->addOption('since', 's', InputOption::VALUE_OPTIONAL, default: null)
             ->addOption('until', 'u', InputOption::VALUE_OPTIONAL, default: null)

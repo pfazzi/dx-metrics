@@ -83,7 +83,7 @@ class SharedOwnership extends Command
     protected function configure(): void
     {
         $this->setName('shared-ownership')
-            ->setDescription('List files by shared ownership across teams')
+            ->setDescription('List files touched by multiple teams, ranked by ownership entropy')
             ->addArgument('path', InputArgument::REQUIRED, 'Path to the git repository')
             ->addOption('teams', 'T', InputOption::VALUE_REQUIRED, 'Path to teams JSON config file')
             ->addOption('since', 's', InputOption::VALUE_OPTIONAL, 'Include commits after this date (e.g. 2024-01-01)', null)

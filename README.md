@@ -2,7 +2,7 @@
 
 [![codecov](https://codecov.io/gh/pfazzi/dx-metrics/branch/main/graph/badge.svg)](https://codecov.io/gh/pfazzi/dx-metrics)
 
-CLI tool for **temporal coupling analysis** of Git repositories — identifies which files are frequently changed together in the same commits.
+CLI tool for **volatility coupling and shared ownership analysis** of Git repositories — surfaces hidden dependencies and organisational friction from commit history.
 
 ## Installation
 

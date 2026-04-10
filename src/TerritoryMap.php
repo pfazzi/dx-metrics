@@ -36,6 +36,7 @@ final class TerritoryMap extends Command
         $output->writeln('<comment>Coupling</comment> on an edge is the total number of co-changed commit pairs between the two teams\' modules — the higher the number, the more implicit coordination is required.');
         $output->writeln('A thick edge between two teams is a Conway\'s Law violation: they share code changes without a shared owner.');
         $output->writeln('Use the module table below to drill into which specific modules drive the coupling.');
+        $output->writeln('Use <info>--format=mermaid</info> to generate output embeddable in GitHub/GitLab markdown files.');
         $output->writeln('');
 
         $repoPath = $input->getArgument('path');
@@ -50,9 +51,16 @@ final class TerritoryMap extends Command
 
         $depth = (int) ($input->getOption('depth') ?? $config->get('depth', 2));
         $minCoupling = (int) ($input->getOption('min-coupling') ?? $config->get('min-coupling', 0));
-        $outputDir = $input->getOption('output-dir') ?? (string) getcwd();
+        $outputDir = $input->getOption('output-dir');
         $excludePatterns = [] !== $input->getOption('exclude') ? $input->getOption('exclude') : ($config->get('exclude') ?? []);
         $filter = $input->getOption('filter') ?? $config->get('filter');
+        $format = $input->getOption('format') ?? 'dot';
+
+        if ('mermaid' !== $format && 'dot' !== $format) {
+            $output->writeln('<error>Invalid --format value. Use "dot" or "mermaid".</error>');
+
+            return Command::FAILURE;
+        }
 
         $since = $input->getOption('since') ?? $config->get('since');
         if ($since) {
@@ -111,14 +119,27 @@ final class TerritoryMap extends Command
         }
         $moduleTable->render();
 
-        $this->generateDot($outputDir, $teamStats, $teamEdges, $teamColors, $minCoupling);
+        if ('mermaid' === $format) {
+            $mermaidContent = $this->generateMermaid($teamStats, $teamEdges, $teamColors);
+            if (null !== $outputDir) {
+                file_put_contents($outputDir.'/territory.mmd', $mermaidContent);
+                $output->writeln('');
+                $output->writeln(\sprintf('Written: <info>%s/territory.mmd</info>', $outputDir));
+            } else {
+                $output->writeln('');
+                $output->writeln($mermaidContent);
+            }
+        } else {
+            $dotOutputDir = $outputDir ?? (string) getcwd();
+            $this->generateDot($dotOutputDir, $teamStats, $teamEdges, $teamColors, $minCoupling);
 
-        $dotFile = $outputDir.'/territory.dot';
-        $pngFile = $outputDir.'/territory.png';
-        $output->writeln('');
-        $output->writeln(\sprintf('Written: <info>%s</info>', $dotFile));
-        if (file_exists($pngFile)) {
-            $output->writeln(\sprintf('Written: <info>%s</info>', $pngFile));
+            $dotFile = $dotOutputDir.'/territory.dot';
+            $pngFile = $dotOutputDir.'/territory.png';
+            $output->writeln('');
+            $output->writeln(\sprintf('Written: <info>%s</info>', $dotFile));
+            if (file_exists($pngFile)) {
+                $output->writeln(\sprintf('Written: <info>%s</info>', $pngFile));
+            }
         }
 
         return Command::SUCCESS;
@@ -137,7 +158,8 @@ final class TerritoryMap extends Command
             ->addOption('since', 's', InputOption::VALUE_OPTIONAL, default: null)
             ->addOption('until', 'u', InputOption::VALUE_OPTIONAL, default: null)
             ->addOption('exclude', null, InputOption::VALUE_IS_ARRAY | InputOption::VALUE_REQUIRED, default: [])
-            ->addOption('output-dir', 'o', InputOption::VALUE_OPTIONAL, default: null);
+            ->addOption('output-dir', 'o', InputOption::VALUE_OPTIONAL, default: null)
+            ->addOption('format', null, InputOption::VALUE_OPTIONAL, 'Output format: dot or mermaid', 'dot');
     }
 
     /**
@@ -270,5 +292,43 @@ final class TerritoryMap extends Command
 
         file_put_contents($dotFile, $dot);
         exec('fdp -Tpng '.escapeshellarg($dotFile).' -o '.escapeshellarg($pngFile));
+    }
+
+    /**
+     * @param array<string, array{commits: int, modules: int, entropy_sum: float}> $teamStats
+     * @param array<string, int>                                                   $teamEdges teamA|||teamB => coChanges
+     * @param array<string, string>                                                $teamColors team => hex color
+     */
+    private function generateMermaid(array $teamStats, array $teamEdges, array $teamColors): string
+    {
+        $lines = [];
+        $lines[] = 'graph LR';
+
+        // Node IDs must be safe for Mermaid (no spaces/special chars)
+        // Use team name as node ID (slugified) and label with stats
+        $nodeId = static fn (string $team): string => preg_replace('/[^a-zA-Z0-9_]/', '_', $team) ?? $team;
+
+        foreach ($teamStats as $team => $stats) {
+            $id = $nodeId($team);
+            $label = \sprintf('%s\\n%d commits | %d modules', $team, $stats['commits'], $stats['modules']);
+            $lines[] = \sprintf('    %s["%s"]', $id, $label);
+        }
+
+        $lines[] = '';
+
+        foreach ($teamEdges as $key => $coChanges) {
+            [$teamA, $teamB] = explode('|||', $key, 2);
+            $lines[] = \sprintf('    %s -- "%d co-changes" --- %s', $nodeId($teamA), $coChanges, $nodeId($teamB));
+        }
+
+        $lines[] = '';
+
+        // Apply styles using hex colors
+        foreach (array_keys($teamStats) as $team) {
+            $color = $teamColors[$team] ?? '#FFFFFF';
+            $lines[] = \sprintf('    style %s fill:%s,stroke:#666,color:#000', $nodeId($team), $color);
+        }
+
+        return implode("\n", $lines)."\n";
     }
 }

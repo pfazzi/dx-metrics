@@ -45,6 +45,7 @@ final class OwnershipHotspots extends Command
         }
 
         $filter = $input->getOption('filter');
+        $excludePatterns = $input->getOption('exclude');
         $minTeams = (int) $input->getOption('min-teams');
 
         $teamConfig = TeamConfig::fromFile($teamsFile);
@@ -52,6 +53,7 @@ final class OwnershipHotspots extends Command
         $analyzer = new SharedOwnershipAnalyzer($git, $teamConfig);
 
         $hotspots = OwnershipHotspotsOutput::fromSharedOwnershipOutput($analyzer->analyze($since, $until))
+            ->filterByExcludedPatterns($excludePatterns)
             ->filterByPath($filter)
             ->filterByMinTeams($minTeams)
             ->sortByRiskDesc();
@@ -85,11 +87,13 @@ final class OwnershipHotspots extends Command
     protected function configure(): void
     {
         $this->setName('ownership-hotspots')
+            ->setDescription('Rank multi-team files by risk score (entropy × commits) to prioritise ownership conversations')
             ->addArgument('path', InputArgument::REQUIRED)
             ->addOption('teams', 'T', InputOption::VALUE_REQUIRED)
             ->addOption('since', 's', InputOption::VALUE_OPTIONAL, default: null)
             ->addOption('until', 'u', InputOption::VALUE_OPTIONAL, default: null)
             ->addOption('filter', 'f', InputOption::VALUE_OPTIONAL, default: null)
+            ->addOption('exclude', null, InputOption::VALUE_IS_ARRAY | InputOption::VALUE_REQUIRED, default: [])
             ->addOption('min-teams', 'm', InputOption::VALUE_OPTIONAL, default: 2);
     }
 }

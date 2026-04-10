@@ -86,4 +86,42 @@ class SharedOwnershipOutputTest extends TestCase
 
         self::assertCount(0, $result->items);
     }
+
+    public function test_filter_by_excluded_patterns__with_empty_patterns__returns_all(): void
+    {
+        $output = new SharedOwnershipOutput(
+            new SharedOwnershipOutputItem('Cargo.lock', ['team-a' => 3, 'team-b' => 2]),
+            new SharedOwnershipOutputItem('src/Order.php', ['team-a' => 3, 'team-b' => 2]),
+        );
+
+        $filtered = $output->filterByExcludedPatterns([]);
+
+        self::assertCount(2, $filtered->items);
+    }
+
+    public function test_filter_by_excluded_patterns__excludes_exact_match(): void
+    {
+        $output = new SharedOwnershipOutput(
+            new SharedOwnershipOutputItem('Cargo.lock', ['team-a' => 3, 'team-b' => 2]),
+            new SharedOwnershipOutputItem('src/Order.php', ['team-a' => 3, 'team-b' => 2]),
+        );
+
+        $filtered = $output->filterByExcludedPatterns(['Cargo.lock']);
+
+        self::assertCount(1, $filtered->items);
+        self::assertSame('src/Order.php', $filtered->items[0]->filePath);
+    }
+
+    public function test_filter_by_excluded_patterns__glob_matches_nested_path(): void
+    {
+        $output = new SharedOwnershipOutput(
+            new SharedOwnershipOutputItem('.sqlx/query-abc123.json', ['team-a' => 3, 'team-b' => 2]),
+            new SharedOwnershipOutputItem('src/Order.php', ['team-a' => 3, 'team-b' => 2]),
+        );
+
+        $filtered = $output->filterByExcludedPatterns(['.sqlx/*']);
+
+        self::assertCount(1, $filtered->items);
+        self::assertSame('src/Order.php', $filtered->items[0]->filePath);
+    }
 }

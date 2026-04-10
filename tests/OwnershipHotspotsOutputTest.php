@@ -79,4 +79,39 @@ class OwnershipHotspotsOutputTest extends TestCase
         self::assertNotSame($output, $output->filterByMinTeams(2));
         self::assertNotSame($output, $output->filterByPath('src/'));
     }
+
+    public function test_filter_by_excluded_patterns__with_empty_patterns__returns_all(): void
+    {
+        $a = new SharedOwnershipOutputItem('Cargo.lock', ['team-a' => 5, 'team-b' => 5]);
+        $b = new SharedOwnershipOutputItem('src/Order.php', ['team-a' => 5, 'team-b' => 5]);
+        $output = new OwnershipHotspotsOutput([$a, $b]);
+
+        $filtered = $output->filterByExcludedPatterns([]);
+
+        self::assertCount(2, $filtered->items);
+    }
+
+    public function test_filter_by_excluded_patterns__excludes_matching_files(): void
+    {
+        $a = new SharedOwnershipOutputItem('Cargo.lock', ['team-a' => 5, 'team-b' => 5]);
+        $b = new SharedOwnershipOutputItem('src/Order.php', ['team-a' => 5, 'team-b' => 5]);
+        $output = new OwnershipHotspotsOutput([$a, $b]);
+
+        $filtered = $output->filterByExcludedPatterns(['Cargo.lock']);
+
+        self::assertCount(1, $filtered->items);
+        self::assertSame('src/Order.php', $filtered->items[0]->filePath);
+    }
+
+    public function test_filter_by_excluded_patterns__glob_matches_nested_path(): void
+    {
+        $a = new SharedOwnershipOutputItem('.sqlx/query-abc123.json', ['team-a' => 5, 'team-b' => 5]);
+        $b = new SharedOwnershipOutputItem('src/Order.php', ['team-a' => 5, 'team-b' => 5]);
+        $output = new OwnershipHotspotsOutput([$a, $b]);
+
+        $filtered = $output->filterByExcludedPatterns(['.sqlx/*']);
+
+        self::assertCount(1, $filtered->items);
+        self::assertSame('src/Order.php', $filtered->items[0]->filePath);
+    }
 }

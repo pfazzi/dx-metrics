@@ -344,7 +344,7 @@ class AnalyzeCommandTest extends TestCase
     {
         $app = new Application();
         $app->add(new Analyze());
-        $tester = new CommandTester($app->find('analyze'));
+        $tester = new CommandTester($app->find('coupling:analyze'));
         $tester->execute($args);
 
         return $tester;

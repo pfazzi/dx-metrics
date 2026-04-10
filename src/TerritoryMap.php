@@ -148,7 +148,7 @@ final class TerritoryMap extends Command
     #[\Override]
     protected function configure(): void
     {
-        $this->setName('territory-map')
+        $this->setName('coupling:map')
             ->setDescription('Visual map of teams with cross-team volatility coupling — one node per team')
             ->addArgument('path', InputArgument::REQUIRED, 'Path to the git repository')
             ->addOption('teams', 'T', InputOption::VALUE_REQUIRED, 'Path to teams JSON config file')

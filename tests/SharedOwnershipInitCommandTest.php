@@ -162,7 +162,7 @@ class SharedOwnershipInitCommandTest extends TestCase
     {
         $app = new Application();
         $app->add(new SharedOwnershipInit());
-        $tester = new CommandTester($app->find('shared-ownership:init'));
+        $tester = new CommandTester($app->find('ownership:init'));
         $tester->execute($args);
 
         return $tester;

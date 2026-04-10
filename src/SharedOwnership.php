@@ -84,7 +84,7 @@ class SharedOwnership extends Command
     #[\Override]
     protected function configure(): void
     {
-        $this->setName('shared-ownership')
+        $this->setName('ownership:list')
             ->setDescription('List files touched by multiple teams, ranked by ownership entropy')
             ->addArgument('path', InputArgument::REQUIRED, 'Path to the git repository')
             ->addOption('teams', 'T', InputOption::VALUE_REQUIRED, 'Path to teams JSON config file')

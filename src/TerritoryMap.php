@@ -296,7 +296,7 @@ final class TerritoryMap extends Command
 
     /**
      * @param array<string, array{commits: int, modules: int, entropy_sum: float}> $teamStats
-     * @param array<string, int>                                                   $teamEdges teamA|||teamB => coChanges
+     * @param array<string, int>                                                   $teamEdges  teamA|||teamB => coChanges
      * @param array<string, string>                                                $teamColors team => hex color
      */
     private function generateMermaid(array $teamStats, array $teamEdges, array $teamColors): string

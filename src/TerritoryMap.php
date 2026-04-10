@@ -49,6 +49,7 @@ final class TerritoryMap extends Command
         $depth = (int) $input->getOption('depth');
         $outputDir = $input->getOption('output-dir') ?? (string) getcwd();
         $excludePatterns = $input->getOption('exclude');
+        $filter = $input->getOption('filter');
 
         $since = $input->getOption('since');
         if ($since) {
@@ -63,7 +64,7 @@ final class TerritoryMap extends Command
         $git = new Git($repoPath);
         $analyzer = new TerritoryMapAnalyzer($git, $teamConfig);
 
-        $result = $analyzer->analyze($depth, $since, $until, $excludePatterns);
+        $result = $analyzer->analyze($depth, $since, $until, $excludePatterns, $filter);
 
         if ([] === $result->modules) {
             $output->writeln('No data found.');
@@ -107,6 +108,7 @@ final class TerritoryMap extends Command
             ->addArgument('path', InputArgument::REQUIRED, 'Path to the git repository')
             ->addOption('teams', 'T', InputOption::VALUE_REQUIRED, 'Path to teams JSON config file')
             ->addOption('depth', 'd', InputOption::VALUE_OPTIONAL, 'Number of path segments that define a module (e.g. 2 = src/Domain)', 2)
+            ->addOption('filter', 'f', InputOption::VALUE_OPTIONAL, 'Only include files matching this path prefix (e.g. src/)', default: null)
             ->addOption('since', 's', InputOption::VALUE_OPTIONAL, default: null)
             ->addOption('until', 'u', InputOption::VALUE_OPTIONAL, default: null)
             ->addOption('exclude', null, InputOption::VALUE_IS_ARRAY | InputOption::VALUE_REQUIRED, default: [])

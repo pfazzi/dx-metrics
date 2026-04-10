@@ -14,7 +14,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 /** @psalm-suppress UnusedClass */
 final class TerritoryMap extends Command
 {
-    /** @var list<string> Node fill colors, one per team (sorted alphabetically) */
+    /** @var list<string> One colour per team, assigned in sorted team name order */
     private const array COLORS = [
         '#AED6F1', // blue
         '#A9DFBF', // green
@@ -26,28 +26,16 @@ final class TerritoryMap extends Command
         '#F5CBA7', // peach
     ];
 
-    /** @var list<string> Lighter background for the cluster box, paired with COLORS */
-    private const array CLUSTER_COLORS = [
-        '#EBF5FB', // light blue
-        '#EAFAF1', // light green
-        '#FEF9E7', // light orange
-        '#FDEDEC', // light red
-        '#F5EEF8', // light purple
-        '#FEFDF0', // light yellow
-        '#E8F8F5', // light teal
-        '#FEF5EC', // light peach
-    ];
-
     #[\Override]
     public function execute(InputInterface $input, OutputInterface $output): int
     {
         $output->writeln('<options=bold>Territory Map</>');
         $output->writeln('');
-        $output->writeln('Groups files into modules by path depth and shows who owns each module and how tightly modules are coupled by commit history.');
-        $output->writeln('<comment>Dominant Team</comment> is the team with the most commits across all files in a module, shown with its percentage of total module commits.');
-        $output->writeln('<comment>Entropy</comment> (0–1) measures ownership concentration within the module: 0 means one team made all the commits, 1 means every team contributed equally.');
-        $output->writeln('<comment>Coupling</comment> between modules is the number of commits that touched files in both modules — the higher the number, the more coordinated those teams must be.');
-        $output->writeln('The generated image groups modules by dominant team. Edges between boxes are Conway\'s Law violations: two teams coordinating implicitly through shared code.');
+        $output->writeln('Shows one node per team. Node size reflects commit volume; edge thickness reflects cross-team volatility coupling (commits that touched both teams\' code).');
+        $output->writeln('<comment>Avg Entropy</comment> is the average ownership entropy across all modules a team dominates: a high value means the team\'s own territory is contested by other teams.');
+        $output->writeln('<comment>Coupling</comment> on an edge is the total number of co-changed commit pairs between the two teams\' modules — the higher the number, the more implicit coordination is required.');
+        $output->writeln('A thick edge between two teams is a Conway\'s Law violation: they share code changes without a shared owner.');
+        $output->writeln('Use the module table below to drill into which specific modules drive the coupling.');
         $output->writeln('');
 
         $teamsFile = $input->getOption('teams');
@@ -85,12 +73,33 @@ final class TerritoryMap extends Command
             return Command::SUCCESS;
         }
 
-        [$teamColors, $clusterColors] = $this->assignColors($result->modules);
+        $teamColors = $this->assignColors($result->modules);
 
-        $table = new Table($output);
-        $table->setHeaders(['Module', 'Dominant Team', 'Entropy', 'Commits', 'Teams']);
+        // Team-level summary table
+        [$teamStats, $teamEdges] = $this->aggregateToTeamLevel($result);
+
+        $output->writeln('<options=bold>Team summary</>');
+        $teamTable = new Table($output);
+        $teamTable->setHeaders(['Team', 'Modules', 'Commits', 'Avg Entropy']);
+        ksort($teamStats);
+        foreach ($teamStats as $team => $stats) {
+            $avgEntropy = $stats['modules'] > 0 ? $stats['entropy_sum'] / $stats['modules'] : 0.0;
+            $teamTable->addRow([
+                $team,
+                $stats['modules'],
+                $stats['commits'],
+                number_format($avgEntropy, 2),
+            ]);
+        }
+        $teamTable->render();
+
+        // Module drill-down table
+        $output->writeln('');
+        $output->writeln('<options=bold>Module detail</>');
+        $moduleTable = new Table($output);
+        $moduleTable->setHeaders(['Module', 'Dominant Team', 'Entropy', 'Commits', 'Teams']);
         foreach ($result->modules as $module) {
-            $table->addRow([
+            $moduleTable->addRow([
                 $module->name,
                 \sprintf('%s (%d%%)', $module->dominantTeam, $module->dominantTeamPercentage),
                 number_format($module->ownershipEntropy, 2),
@@ -98,9 +107,9 @@ final class TerritoryMap extends Command
                 $module->teamCount,
             ]);
         }
-        $table->render();
+        $moduleTable->render();
 
-        $this->generateDot($outputDir, $result, $teamColors, $clusterColors, $minCoupling);
+        $this->generateDot($outputDir, $teamStats, $teamEdges, $teamColors, $minCoupling);
 
         $dotFile = $outputDir.'/territory.dot';
         $pngFile = $outputDir.'/territory.png';
@@ -117,7 +126,7 @@ final class TerritoryMap extends Command
     protected function configure(): void
     {
         $this->setName('territory-map')
-            ->setDescription('Visual map of modules grouped by team with cross-team volatility coupling edges')
+            ->setDescription('Visual map of teams with cross-team volatility coupling — one node per team')
             ->addArgument('path', InputArgument::REQUIRED, 'Path to the git repository')
             ->addOption('teams', 'T', InputOption::VALUE_REQUIRED, 'Path to teams JSON config file')
             ->addOption('depth', 'd', InputOption::VALUE_OPTIONAL, 'Number of path segments that define a module (e.g. 2 = src/Domain)', 2)
@@ -132,7 +141,7 @@ final class TerritoryMap extends Command
     /**
      * @param TerritoryMapModule[] $modules
      *
-     * @return array{array<string, string>, array<string, string>} [teamColors, clusterColors] both keyed by team name
+     * @return array<string, string> team => hex color
      */
     private function assignColors(array $modules): array
     {
@@ -143,104 +152,111 @@ final class TerritoryMap extends Command
         $teams = array_keys($teams);
         sort($teams);
 
-        $teamColors = [];
-        $clusterColors = [];
+        $colors = [];
         foreach ($teams as $i => $team) {
-            $idx = $i % \count(self::COLORS);
-            $teamColors[$team] = self::COLORS[$idx];
-            $clusterColors[$team] = self::CLUSTER_COLORS[$idx];
+            $colors[$team] = self::COLORS[$i % \count(self::COLORS)];
         }
 
-        return [$teamColors, $clusterColors];
+        return $colors;
     }
 
     /**
-     * @param array<string, string> $teamColors
-     * @param array<string, string> $clusterColors
+     * Aggregates module-level data up to team level.
+     *
+     * @return array{
+     *   array<string, array{modules: int, commits: int, entropy_sum: float}>,
+     *   array<string, int>
+     * } [teamStats, teamEdges] where teamEdges keys are "teamA|||teamB"
+     */
+    private function aggregateToTeamLevel(TerritoryMapOutput $result): array
+    {
+        // Index module → dominant team
+        $moduleTeam = [];
+        foreach ($result->modules as $module) {
+            $moduleTeam[$module->name] = $module->dominantTeam;
+        }
+
+        // Aggregate modules per team
+        $teamStats = [];
+        foreach ($result->modules as $module) {
+            $team = $module->dominantTeam;
+            $teamStats[$team]['modules'] = ($teamStats[$team]['modules'] ?? 0) + 1;
+            $teamStats[$team]['commits'] = ($teamStats[$team]['commits'] ?? 0) + $module->totalCommits;
+            $teamStats[$team]['entropy_sum'] = ($teamStats[$team]['entropy_sum'] ?? 0.0) + $module->ownershipEntropy;
+        }
+
+        // Aggregate cross-team edges to team-pair level (sum co-changes)
+        $teamEdges = [];
+        foreach ($result->edges as $edge) {
+            $teamA = $moduleTeam[$edge->moduleA] ?? null;
+            $teamB = $moduleTeam[$edge->moduleB] ?? null;
+            if (null === $teamA || null === $teamB || $teamA === $teamB) {
+                continue;
+            }
+            [$ta, $tb] = $teamA < $teamB ? [$teamA, $teamB] : [$teamB, $teamA];
+            $key = $ta.'|||'.$tb;
+            $teamEdges[$key] = ($teamEdges[$key] ?? 0) + $edge->coChanges;
+        }
+
+        return [$teamStats, $teamEdges];
+    }
+
+    /**
+     * @param array<string, array{modules: int, commits: int, entropy_sum: float}> $teamStats
+     * @param array<string, int>                                                   $teamEdges
+     * @param array<string, string>                                                $teamColors
      */
     private function generateDot(
         string $outputDir,
-        TerritoryMapOutput $result,
+        array $teamStats,
+        array $teamEdges,
         array $teamColors,
-        array $clusterColors,
         int $minCoupling,
     ): void {
-        // Index modules by name for team lookup
-        $moduleTeamIndex = [];
-        foreach ($result->modules as $module) {
-            $moduleTeamIndex[$module->name] = $module->dominantTeam;
-        }
-
-        // Group modules by dominant team
-        /** @var array<string, TerritoryMapModule[]> $teamModules */
-        $teamModules = [];
-        foreach ($result->modules as $module) {
-            $teamModules[$module->dominantTeam][] = $module;
-        }
-        ksort($teamModules);
-
         $dot = "graph G {\n";
         $dot .= "  graph [overlap=false, splines=true, pad=0.5];\n";
-        $dot .= "  node [shape=box, fontsize=11, style=filled];\n";
+        $dot .= "  node [shape=box, fontsize=13, style=filled, margin=\"0.4,0.25\"];\n";
         $dot .= "\n";
 
-        // One cluster subgraph per team — nodes inside are that team's modules
-        foreach ($teamModules as $team => $modules) {
-            $nodeColor = $teamColors[$team] ?? '#EEEEEE';
-            $bgColor = $clusterColors[$team] ?? '#F8F9FA';
-            $clusterId = preg_replace('/[^a-zA-Z0-9]/', '_', $team);
-
-            $dot .= \sprintf("  subgraph cluster_%s {\n", $clusterId);
-            $dot .= \sprintf(
-                "    label=\"%s\"; style=filled; fillcolor=\"%s\"; color=\"%s\"; fontsize=13; penwidth=2;\n",
+        // One node per team
+        $maxCommits = max(array_column($teamStats, 'commits'));
+        ksort($teamStats);
+        foreach ($teamStats as $team => $stats) {
+            $color = $teamColors[$team] ?? '#EEEEEE';
+            $avgEntropy = $stats['modules'] > 0 ? $stats['entropy_sum'] / $stats['modules'] : 0.0;
+            // Scale node width by commit volume relative to max
+            $width = max(1.5, round($stats['commits'] / $maxCommits * 4, 1));
+            $label = \sprintf(
+                '%s\\n%d modules  |  %d commits\\navg entropy: %.2f',
                 addslashes($team),
-                $bgColor,
-                $nodeColor,
+                $stats['modules'],
+                $stats['commits'],
+                $avgEntropy,
             );
-
-            foreach ($modules as $module) {
-                // Label shows module name + entropy + commits (team is implicit from cluster)
-                $label = \sprintf(
-                    '%s\\nentropy: %.2f  |  %d commits',
-                    addslashes($module->name),
-                    $module->ownershipEntropy,
-                    $module->totalCommits,
-                );
-                $dot .= \sprintf(
-                    "    \"%s\" [fillcolor=\"%s\", label=\"%s\"];\n",
-                    addslashes($module->name),
-                    $nodeColor,
-                    $label,
-                );
-            }
-
-            $dot .= "  }\n\n";
+            $dot .= \sprintf(
+                "  \"%s\" [fillcolor=\"%s\", label=\"%s\", width=%.1f, fixedsize=false];\n",
+                addslashes($team),
+                $color,
+                $label,
+                $width,
+            );
         }
 
-        // Cross-team edges only, filtered by min-coupling threshold
-        $crossTeamEdges = array_filter(
-            $result->edges,
-            static function (TerritoryMapEdge $edge) use ($moduleTeamIndex, $minCoupling): bool {
-                if ($edge->coChanges < $minCoupling) {
-                    return false;
-                }
-                $teamA = $moduleTeamIndex[$edge->moduleA] ?? null;
-                $teamB = $moduleTeamIndex[$edge->moduleB] ?? null;
-
-                return null !== $teamA && null !== $teamB && $teamA !== $teamB;
-            },
-        );
-
-        if ([] !== $crossTeamEdges) {
-            $maxCoChanges = max(array_map(static fn (TerritoryMapEdge $e) => $e->coChanges, array_values($crossTeamEdges)));
-            foreach ($crossTeamEdges as $edge) {
-                $penwidth = max(1, (int) round($edge->coChanges * 5 / $maxCoChanges));
+        // Team-pair edges above threshold
+        $filteredEdges = array_filter($teamEdges, static fn (int $count): bool => $count >= $minCoupling);
+        if ([] !== $filteredEdges) {
+            $maxCount = max($filteredEdges);
+            $dot .= "\n";
+            arsort($filteredEdges);
+            foreach ($filteredEdges as $key => $count) {
+                [$ta, $tb] = explode('|||', $key, 2);
+                $penwidth = max(1, (int) round($count * 8 / $maxCount));
                 $dot .= \sprintf(
-                    "  \"%s\" -- \"%s\" [penwidth=%d, label=\"%d\", color=\"#CC0000\", fontcolor=\"#CC0000\"];\n",
-                    addslashes($edge->moduleA),
-                    addslashes($edge->moduleB),
+                    "  \"%s\" -- \"%s\" [penwidth=%d, label=\"%d\"];\n",
+                    addslashes($ta),
+                    addslashes($tb),
                     $penwidth,
-                    $edge->coChanges,
+                    $count,
                 );
             }
         }

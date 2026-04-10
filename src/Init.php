@@ -88,9 +88,43 @@ final class Init extends Command
     {
         $this->setName('init')
             ->setDescription('Scaffold .dx-metrics.json and a teams template in the target repository')
+            ->setHelp(<<<'HELP'
+The <info>init</info> command bootstraps dx-metrics in a repository in two modes.
+
+<options=bold>First-time setup:</>
+
+  <info>dx-metrics init .</info>
+
+  Scans git authors from the last 12 months, auto-detects the source directory
+  (src/, app/, or lib/), and writes two files:
+
+  • <comment>.dx-metrics.json</comment> — main config with all tunable parameters:
+      teams, depth, filter, exclude, min-teams, min-coupling, period
+
+  • <comment>.dx-metrics-teams.json</comment> — teams template with:
+      - empty "team-a" / "team-b" placeholders to rename
+      - <comment>_unassigned</comment>: list of discovered author emails
+      - <comment>_unassigned_details</comment>: name + example commit SHA per email,
+        so you can identify aliases (run <info>git show <sha></info> when unsure)
+
+  Move emails from <comment>_unassigned</comment> into named team arrays, remove the
+  <comment>_unassigned</comment> and <comment>_unassigned_details</comment> keys, then run any analysis command.
+
+  Fails if either file already exists — use <info>--force</info> to overwrite.
+
+<options=bold>Syncing new contributors (--update):</>
+
+  <info>dx-metrics init --update .</info>
+
+  Re-scans git and appends authors that are not yet mapped to any team
+  and not already in <comment>_unassigned</comment>. Existing team assignments are never
+  touched. Run this whenever new developers join the repository.
+
+  Fails if <comment>.dx-metrics-teams.json</comment> does not exist yet.
+HELP)
             ->addArgument('path', InputArgument::REQUIRED, 'Path to the git repository')
-            ->addOption('force', null, InputOption::VALUE_NONE, 'Overwrite existing files')
-            ->addOption('update', null, InputOption::VALUE_NONE, 'Add new unmapped authors to the existing teams file');
+            ->addOption('force', null, InputOption::VALUE_NONE, 'Overwrite existing files (first-time setup only)')
+            ->addOption('update', null, InputOption::VALUE_NONE, 'Append new unmapped authors to the existing teams file without touching existing assignments');
     }
 
     private function runUpdate(string $repoPath, string $teamsFile, OutputInterface $output): int

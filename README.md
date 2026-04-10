@@ -10,6 +10,22 @@ CLI tool for **volatility coupling and shared ownership analysis** of Git reposi
 composer install
 ```
 
+## Configuration file
+
+Place a `.dx-metrics.json` file in your repository root to set default options for all commands. CLI flags always take precedence.
+
+```json
+{
+  "teams": "teams.json",
+  "depth": 2,
+  "filter": "src/",
+  "exclude": ["*.lock", "vendor/*"],
+  "since": "2024-01-01"
+}
+```
+
+Any key corresponds to the long name of the matching CLI option.
+
 ## Usage
 
 ```bash

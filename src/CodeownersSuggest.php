@@ -24,24 +24,26 @@ final class CodeownersSuggest extends Command
         $output->writeln('Review the output carefully: a low dominance percentage (e.g. 45%) means ownership is contested and the suggestion may need discussion.');
         $output->writeln('');
 
-        $teamsFile = $input->getOption('teams');
+        $repoPath = $input->getArgument('path');
+        $config = DxMetricsConfig::fromRepoPath($repoPath);
+
+        $teamsFile = $input->getOption('teams') ?? $config->get('teams');
         if (null === $teamsFile) {
             $output->writeln('<error>The --teams option is required.</error>');
 
             return Command::FAILURE;
         }
 
-        $repoPath = $input->getArgument('path');
-        $depth = (int) $input->getOption('depth');
-        $excludePatterns = $input->getOption('exclude');
-        $filter = $input->getOption('filter');
+        $depth = (int) ($input->getOption('depth') ?? $config->get('depth', 2));
+        $excludePatterns = [] !== $input->getOption('exclude') ? $input->getOption('exclude') : ($config->get('exclude') ?? []);
+        $filter = $input->getOption('filter') ?? $config->get('filter');
         $githubOrg = $input->getOption('github-org');
         $outputFile = $input->getOption('output');
 
-        $since = $input->getOption('since');
+        $since = $input->getOption('since') ?? $config->get('since');
         $since = $since ? new \DateTimeImmutable($since) : new \DateTimeImmutable('-6 months');
 
-        $until = $input->getOption('until');
+        $until = $input->getOption('until') ?? $config->get('until');
         $until = $until ? new \DateTimeImmutable($until) : new \DateTimeImmutable();
 
         $teamConfig = TeamConfig::fromFile($teamsFile);
@@ -100,7 +102,7 @@ final class CodeownersSuggest extends Command
             ->setDescription('Generate a CODEOWNERS draft from recent commit history')
             ->addArgument('path', InputArgument::REQUIRED, 'Path to the git repository')
             ->addOption('teams', 'T', InputOption::VALUE_REQUIRED, 'Path to teams JSON config file')
-            ->addOption('depth', 'd', InputOption::VALUE_OPTIONAL, 'Number of path segments that define a module', 2)
+            ->addOption('depth', 'd', InputOption::VALUE_OPTIONAL, 'Number of path segments that define a module', null)
             ->addOption('filter', 'f', InputOption::VALUE_OPTIONAL, 'Only include files matching this path prefix (e.g. src/)', default: null)
             ->addOption('since', 's', InputOption::VALUE_OPTIONAL, 'Start of the commit window (default: 6 months ago)', null)
             ->addOption('until', 'u', InputOption::VALUE_OPTIONAL, 'End of the commit window (default: today)', null)

@@ -26,27 +26,28 @@ final class OwnershipHotspots extends Command
         $output->writeln('Start from the top: high-scoring files represent the greatest hidden coordination cost between teams and are the best candidates for an ownership clarification conversation.');
         $output->writeln('');
 
-        $teamsFile = $input->getOption('teams');
+        $repoPath = $input->getArgument('path');
+        $config = DxMetricsConfig::fromRepoPath($repoPath);
+
+        $teamsFile = $input->getOption('teams') ?? $config->get('teams');
         if (null === $teamsFile) {
             $output->writeln('<error>The --teams option is required.</error>');
 
             return Command::FAILURE;
         }
 
-        $repoPath = $input->getArgument('path');
-
-        $since = $input->getOption('since');
+        $since = $input->getOption('since') ?? $config->get('since');
         if ($since) {
             $since = new \DateTimeImmutable($since);
         }
-        $until = $input->getOption('until');
+        $until = $input->getOption('until') ?? $config->get('until');
         if ($until) {
             $until = new \DateTimeImmutable($until);
         }
 
-        $filter = $input->getOption('filter');
-        $excludePatterns = $input->getOption('exclude');
-        $minTeams = (int) $input->getOption('min-teams');
+        $filter = $input->getOption('filter') ?? $config->get('filter');
+        $excludePatterns = [] !== $input->getOption('exclude') ? $input->getOption('exclude') : ($config->get('exclude') ?? []);
+        $minTeams = (int) ($input->getOption('min-teams') ?? $config->get('min-teams', 2));
 
         $teamConfig = TeamConfig::fromFile($teamsFile);
         $git = new Git($repoPath);
@@ -94,6 +95,6 @@ final class OwnershipHotspots extends Command
             ->addOption('until', 'u', InputOption::VALUE_OPTIONAL, default: null)
             ->addOption('filter', 'f', InputOption::VALUE_OPTIONAL, default: null)
             ->addOption('exclude', null, InputOption::VALUE_IS_ARRAY | InputOption::VALUE_REQUIRED, default: [])
-            ->addOption('min-teams', 'm', InputOption::VALUE_OPTIONAL, default: 2);
+            ->addOption('min-teams', 'm', InputOption::VALUE_OPTIONAL, default: null);
     }
 }

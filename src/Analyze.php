@@ -76,19 +76,21 @@ class Analyze extends Command
     private function getParams(InputInterface $input): array
     {
         $repoPath = $input->getArgument('path');
-        $since = $input->getOption('since');
+        $config = DxMetricsConfig::fromRepoPath($repoPath);
+
+        $since = $input->getOption('since') ?? $config->get('since');
         if ($since) {
             $since = new \DateTimeImmutable($since);
         }
-        $until = $input->getOption('until');
+        $until = $input->getOption('until') ?? $config->get('until');
         if ($until) {
             $until = new \DateTimeImmutable($until);
         }
         $threshold = (int) $input->getOption('threshold');
 
-        $filter = $input->getOption('filter');
+        $filter = $input->getOption('filter') ?? $config->get('filter');
 
-        $excludePatterns = $input->getOption('exclude');
+        $excludePatterns = [] !== $input->getOption('exclude') ? $input->getOption('exclude') : ($config->get('exclude') ?? []);
 
         $outputDir = $input->getOption('output-dir') ?? (string) getcwd();
 

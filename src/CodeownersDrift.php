@@ -25,17 +25,19 @@ final class CodeownersDrift extends Command
         $output->writeln('A high drift score means the declared owner is not who is actually maintaining the code — an ownership conversation is overdue.');
         $output->writeln('');
 
-        $teamsFile = $input->getOption('teams');
+        $repoPath = $input->getArgument('path');
+        $config = DxMetricsConfig::fromRepoPath($repoPath);
+
+        $teamsFile = $input->getOption('teams') ?? $config->get('teams');
         if (null === $teamsFile) {
             $output->writeln('<error>The --teams option is required.</error>');
 
             return Command::FAILURE;
         }
 
-        $repoPath = $input->getArgument('path');
         $codeownersPath = $input->getOption('codeowners') ?? $this->findCodeowners($repoPath);
-        $excludePatterns = $input->getOption('exclude');
-        $filter = $input->getOption('filter');
+        $excludePatterns = [] !== $input->getOption('exclude') ? $input->getOption('exclude') : ($config->get('exclude') ?? []);
+        $filter = $input->getOption('filter') ?? $config->get('filter');
 
         if (null === $codeownersPath) {
             $output->writeln('<error>No CODEOWNERS file found. Checked: CODEOWNERS, .github/CODEOWNERS, docs/CODEOWNERS</error>');
@@ -49,10 +51,10 @@ final class CodeownersDrift extends Command
             return Command::FAILURE;
         }
 
-        $since = $input->getOption('since');
+        $since = $input->getOption('since') ?? $config->get('since');
         $since = $since ? new \DateTimeImmutable($since) : new \DateTimeImmutable('-6 months');
 
-        $until = $input->getOption('until');
+        $until = $input->getOption('until') ?? $config->get('until');
         $until = $until ? new \DateTimeImmutable($until) : new \DateTimeImmutable();
 
         $teamConfig = TeamConfig::fromFile($teamsFile);

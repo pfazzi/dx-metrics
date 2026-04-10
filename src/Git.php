@@ -63,4 +63,38 @@ readonly class Git
 
         return $this->runCommand($command, $this->repoPath);
     }
+
+    /** Returns all file paths tracked by git (git ls-files). */
+    public function getAllTrackedFiles(): array
+    {
+        return $this->runCommand('git ls-files', $this->repoPath);
+    }
+
+    /**
+     * Returns the author date of the most recent commit touching this file,
+     * or null if the file has never been committed.
+     * Uses: git log -1 --format="%aI" -- <file>.
+     */
+    public function getLastCommitDateForFile(string $filePath): ?\DateTimeImmutable
+    {
+        $lines = $this->runCommand('git log -1 --format="%aI" -- '.escapeshellarg($filePath), $this->repoPath);
+        $line = trim($lines[0] ?? '');
+        if ('' === $line) {
+            return null;
+        }
+
+        return new \DateTimeImmutable($line);
+    }
+
+    /**
+     * Returns the author email of the most recent commit touching this file.
+     * Uses: git log -1 --format="%ae" -- <file>.
+     */
+    public function getLastCommitAuthorEmailForFile(string $filePath): ?string
+    {
+        $lines = $this->runCommand('git log -1 --format="%ae" -- '.escapeshellarg($filePath), $this->repoPath);
+        $line = trim($lines[0] ?? '');
+
+        return '' !== $line ? $line : null;
+    }
 }

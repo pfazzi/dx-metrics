@@ -14,6 +14,21 @@ readonly class SharedOwnershipOutput
         $this->items = $items;
     }
 
+    /** @param string[] $patterns */
+    public function filterByExcludedPatterns(array $patterns): self
+    {
+        if ([] === $patterns) {
+            return $this;
+        }
+
+        $filtered = array_filter(
+            $this->items,
+            static fn (SharedOwnershipOutputItem $item) => !self::matchesAnyPattern($item->filePath, $patterns),
+        );
+
+        return new self(...array_values($filtered));
+    }
+
     public function filterByMinTeams(int $minTeams): self
     {
         $filtered = array_filter($this->items, static fn ($i) => $i->teamCount >= $minTeams);
@@ -38,5 +53,17 @@ readonly class SharedOwnershipOutput
         usort($items, static fn ($a, $b) => $b->ownershipEntropy <=> $a->ownershipEntropy);
 
         return new self(...$items);
+    }
+
+    /** @param string[] $patterns */
+    private static function matchesAnyPattern(string $path, array $patterns): bool
+    {
+        foreach ($patterns as $pattern) {
+            if (fnmatch($pattern, $path)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

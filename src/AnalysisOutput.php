@@ -30,6 +30,22 @@ readonly class AnalysisOutput
         return new self(...array_values($uniques));
     }
 
+    /** @param string[] $patterns */
+    public function filterByExcludedPatterns(array $patterns): self
+    {
+        if ([] === $patterns) {
+            return $this;
+        }
+
+        $filtered = array_filter(
+            $this->items,
+            static fn (AnalysisOutputItem $item) => !self::matchesAnyPattern($item->pathA, $patterns)
+                && !self::matchesAnyPattern($item->pathB, $patterns),
+        );
+
+        return new self(...array_values($filtered));
+    }
+
     public function filterByPath(?string $filter): self
     {
         if (null === $filter) {
@@ -72,5 +88,17 @@ readonly class AnalysisOutput
         usort($items, static fn (AnalysisOutputItem $a, AnalysisOutputItem $b) => $b->coChangeCount <=> $a->coChangeCount);
 
         return new self(...array_values($items));
+    }
+
+    /** @param string[] $patterns */
+    private static function matchesAnyPattern(string $path, array $patterns): bool
+    {
+        foreach ($patterns as $pattern) {
+            if (fnmatch($pattern, $path)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

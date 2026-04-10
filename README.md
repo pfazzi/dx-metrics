@@ -22,6 +22,7 @@ composer install
 | `--until` | `-u` | Include commits before this date (e.g. `2024-12-31`) |
 | `--threshold` | `-t` | Minimum number of co-changes to include (default: 0) |
 | `--filter` | `-f` | Only show pairs where both files match this path prefix |
+| `--exclude` | | Exclude files matching this glob pattern (repeatable, e.g. `--exclude=Cargo.lock --exclude='.sqlx/*'`) |
 | `--output-dir` | `-o` | Directory where `coupling.dot` and `coupling.png` are written (default: current directory) |
 
 ### Example
@@ -68,6 +69,7 @@ Create a JSON file mapping author emails to teams:
 | `--since` | `-s` | Include commits after this date (e.g. `2024-01-01`) |
 | `--until` | `-u` | Include commits before this date (e.g. `2024-12-31`) |
 | `--filter` | `-f` | Only show files matching this path prefix |
+| `--exclude` | | Exclude files matching this glob pattern (repeatable, e.g. `--exclude=Cargo.lock --exclude='.sqlx/*'`) |
 | `--min-teams` | `-m` | Minimum number of teams to show a file (default: 2) |
 
 ### Example
@@ -109,6 +111,7 @@ Identifies files with **ambiguous ownership**, ranked by urgency. The risk score
 | `--since` | `-s` | Include commits after this date (e.g. `2024-01-01`) |
 | `--until` | `-u` | Include commits before this date (e.g. `2024-12-31`) |
 | `--filter` | `-f` | Only show files matching this path prefix |
+| `--exclude` | | Exclude files matching this glob pattern (repeatable, e.g. `--exclude=Cargo.lock --exclude='.sqlx/*'`) |
 | `--min-teams` | `-m` | Minimum number of teams to show a file (default: 2) |
 
 ### Example

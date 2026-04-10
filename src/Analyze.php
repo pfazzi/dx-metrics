@@ -24,12 +24,13 @@ class Analyze extends Command
         $output->writeln('Pairs with strong coupling across module or team boundaries are prime candidates for decoupling or explicit interface extraction.');
         $output->writeln('');
 
-        [$repoPath, $since, $until, $coChangesThreshold, $pathFilter, $outputDir] = $this->getParams($input);
+        [$repoPath, $since, $until, $coChangesThreshold, $pathFilter, $excludePatterns, $outputDir] = $this->getParams($input);
 
         $git = new Git($repoPath);
         $analyzer = new Analyzer($git);
 
         $analysisOutput = $analyzer->analyze($since, $until)
+            ->filterByExcludedPatterns($excludePatterns)
             ->filterByPath($pathFilter)
             ->filterByCoChangesThreshold($coChangesThreshold)
             ->getUniqueFilePairs()
@@ -51,6 +52,7 @@ class Analyze extends Command
             ->addOption('until', 'u', InputOption::VALUE_OPTIONAL, default: null)
             ->addOption('threshold', 't', InputOption::VALUE_OPTIONAL, default: 0)
             ->addOption('filter', 'f', InputOption::VALUE_OPTIONAL, default: null)
+            ->addOption('exclude', null, InputOption::VALUE_IS_ARRAY | InputOption::VALUE_REQUIRED, default: [])
             ->addOption('output-dir', 'o', InputOption::VALUE_OPTIONAL, default: null);
     }
 
@@ -85,9 +87,11 @@ class Analyze extends Command
 
         $filter = $input->getOption('filter');
 
+        $excludePatterns = $input->getOption('exclude');
+
         $outputDir = $input->getOption('output-dir') ?? (string) getcwd();
 
-        return [$repoPath, $since, $until, $threshold, $filter, $outputDir];
+        return [$repoPath, $since, $until, $threshold, $filter, $excludePatterns, $outputDir];
     }
 
     private function plotAnalysisOutput(string $outputDir, AnalysisOutput $analysisOutput): void

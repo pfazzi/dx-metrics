@@ -166,4 +166,69 @@ class AnalysisOutputTest extends TestCase
 
         self::assertCount(0, $result->items);
     }
+
+    public function test_filter_by_excluded_patterns__with_empty_patterns__returns_all(): void
+    {
+        $output = new AnalysisOutput(
+            new AnalysisOutputItem('src/A.php', 'src/B.php', 3),
+            new AnalysisOutputItem('Cargo.lock', 'src/B.php', 2),
+        );
+
+        $filtered = $output->filterByExcludedPatterns([]);
+
+        self::assertCount(2, $filtered->items);
+    }
+
+    public function test_filter_by_excluded_patterns__excludes_pair_when_path_a_matches(): void
+    {
+        $output = new AnalysisOutput(
+            new AnalysisOutputItem('Cargo.lock', 'src/Order.php', 5),
+            new AnalysisOutputItem('src/A.php', 'src/B.php', 3),
+        );
+
+        $filtered = $output->filterByExcludedPatterns(['Cargo.lock']);
+
+        self::assertCount(1, $filtered->items);
+        self::assertSame('src/A.php', $filtered->items[0]->pathA);
+    }
+
+    public function test_filter_by_excluded_patterns__excludes_pair_when_path_b_matches(): void
+    {
+        $output = new AnalysisOutput(
+            new AnalysisOutputItem('src/Order.php', 'Cargo.lock', 5),
+            new AnalysisOutputItem('src/A.php', 'src/B.php', 3),
+        );
+
+        $filtered = $output->filterByExcludedPatterns(['Cargo.lock']);
+
+        self::assertCount(1, $filtered->items);
+        self::assertSame('src/A.php', $filtered->items[0]->pathA);
+    }
+
+    public function test_filter_by_excluded_patterns__glob_pattern_matches_nested_paths(): void
+    {
+        $output = new AnalysisOutput(
+            new AnalysisOutputItem('.sqlx/query-abc123.json', 'src/Order.php', 4),
+            new AnalysisOutputItem('src/A.php', 'src/B.php', 3),
+        );
+
+        $filtered = $output->filterByExcludedPatterns(['.sqlx/*']);
+
+        self::assertCount(1, $filtered->items);
+        self::assertSame('src/A.php', $filtered->items[0]->pathA);
+    }
+
+    public function test_filter_by_excluded_patterns__multiple_patterns(): void
+    {
+        $output = new AnalysisOutput(
+            new AnalysisOutputItem('Cargo.lock', 'src/A.php', 5),
+            new AnalysisOutputItem('.sqlx/query.json', 'src/B.php', 4),
+            new AnalysisOutputItem('src/A.php', 'src/B.php', 3),
+        );
+
+        $filtered = $output->filterByExcludedPatterns(['Cargo.lock', '.sqlx/*']);
+
+        self::assertCount(1, $filtered->items);
+        self::assertSame('src/A.php', $filtered->items[0]->pathA);
+    }
 }

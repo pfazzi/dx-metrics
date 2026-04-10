@@ -308,6 +308,28 @@ class AnalyzeCommandTest extends TestCase
         self::assertStringNotContainsString('After.php', $output);
     }
 
+    public function test_exclude_option_hides_matching_files_from_output(): void
+    {
+        $this->commit(
+            $this->repoPath,
+            new \DateTimeImmutable('2024-01-05T12:00:00+0000'),
+            'feat: order+lock',
+            [
+                '/src/Order.php' => "content\n",
+                '/Cargo.lock' => "lock\n",
+            ],
+        );
+
+        $tester = $this->executeCommand([
+            'path' => $this->repoPath,
+            '--output-dir' => $this->outputDir,
+            '--exclude' => ['Cargo.lock'],
+        ]);
+        $output = $tester->getDisplay();
+
+        self::assertStringNotContainsString('Cargo.lock', $output);
+    }
+
     private function removeCwdCouplingFiles(): void
     {
         foreach (['coupling.dot', 'coupling.png'] as $file) {

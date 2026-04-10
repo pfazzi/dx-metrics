@@ -190,6 +190,31 @@ class SharedOwnershipCommandTest extends TestCase
         self::assertStringNotContainsString('src/Old.php', $output);
     }
 
+    public function test_exclude_option_hides_matching_files(): void
+    {
+        $this->writeTeams([
+            'teams' => [
+                'platform' => ['alice@example.com'],
+                'payments' => ['bob@example.com'],
+            ],
+        ]);
+
+        $this->commit($this->repoPath, new \DateTimeImmutable('2024-01-01T12:00:00+0000'),
+            'feat: shared', ['/src/Shared.php' => "v1\n", '/Cargo.lock' => "lock\n"], 'alice@example.com');
+        $this->commit($this->repoPath, new \DateTimeImmutable('2024-01-02T12:00:00+0000'),
+            'feat: update', ['/src/Shared.php' => "v2\n", '/Cargo.lock' => "lock2\n"], 'bob@example.com');
+
+        $tester = $this->executeCommand([
+            'path' => $this->repoPath,
+            '--teams' => $this->teamsFile,
+            '--exclude' => ['Cargo.lock'],
+        ]);
+        $output = $tester->getDisplay();
+
+        self::assertStringContainsString('src/Shared.php', $output);
+        self::assertStringNotContainsString('Cargo.lock', $output);
+    }
+
     private function executeCommand(array $args): CommandTester
     {
         $app = new Application();

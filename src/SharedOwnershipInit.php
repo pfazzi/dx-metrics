@@ -51,6 +51,11 @@ class SharedOwnershipInit extends Command
         $json = json_encode($template, \JSON_PRETTY_PRINT | \JSON_UNESCAPED_SLASHES)."\n";
 
         if (null !== $outputFile) {
+            $output->writeln('<options=bold>Shared Ownership — Team Config Init</>');
+            $output->writeln('');
+            $output->writeln('Scans git author history and generates a teams configuration template.');
+            $output->writeln('Authors found in the repository are placed in <comment>_unassigned</comment>; rename the team keys and move emails into the appropriate arrays to start using the ownership analysis commands.');
+            $output->writeln('');
             file_put_contents($outputFile, $json);
             $output->writeln(\sprintf('Teams template written to <info>%s</info> (%d authors found).', $outputFile, \count($unassigned)));
             $output->writeln('Edit the file: move emails from <comment>_unassigned</comment> into your team arrays, then rename the team keys.');

@@ -18,9 +18,14 @@ final class Init extends Command
     {
         $repoPath = rtrim((string) $input->getArgument('path'), '/');
         $force = (bool) $input->getOption('force');
+        $update = (bool) $input->getOption('update');
 
         $configFile = $repoPath.'/.dx-metrics.json';
         $teamsFile = $repoPath.'/.dx-metrics-teams.json';
+
+        if ($update) {
+            return $this->runUpdate($repoPath, $teamsFile, $output);
+        }
 
         if (!$force) {
             $existing = array_filter([$configFile, $teamsFile], 'file_exists');
@@ -36,41 +41,26 @@ final class Init extends Command
         $output->writeln('<options=bold>dx-metrics init</>');
         $output->writeln('');
 
-        // Scan git authors from the last 12 months
-        $git = new Git($repoPath);
-        $since = new \DateTimeImmutable('-12 months');
-        $commits = $git->getCommitsWithAuthorDetails($since, null);
+        $authorDetails = $this->scanAuthors($repoPath);
 
-        // Collect first-seen commit per email (git log is newest-first, so last write wins → oldest)
-        $authorDetails = [];
-        foreach ($commits as $commit) {
-            $email = strtolower($commit['email']);
-            $authorDetails[$email] = ['name' => $commit['name'], 'example_commit' => $commit['sha']];
-        }
-        ksort($authorDetails);
-        $unassigned = array_keys($authorDetails);
+        $output->writeln(\sprintf('Found <info>%d</info> contributors in the last 12 months.', \count($authorDetails)));
 
-        $output->writeln(\sprintf('Found <info>%d</info> contributors in the last 12 months.', \count($unassigned)));
-
-        // Auto-detect source directory
         $filter = $this->detectSourceDir($repoPath);
         if (null !== $filter) {
             $output->writeln(\sprintf('Detected source directory: <info>%s</info>', $filter));
         }
         $output->writeln('');
 
-        // Write teams template
         $teamsTemplate = [
             'teams' => [
                 'team-a' => [],
                 'team-b' => [],
             ],
-            '_unassigned' => $unassigned,
+            '_unassigned' => array_keys($authorDetails),
             '_unassigned_details' => $authorDetails,
         ];
         file_put_contents($teamsFile, json_encode($teamsTemplate, \JSON_PRETTY_PRINT | \JSON_UNESCAPED_SLASHES)."\n");
 
-        // Build config, omitting null values
         $config = ['teams' => '.dx-metrics-teams.json', 'depth' => 2];
         if (null !== $filter) {
             $config['filter'] = $filter;
@@ -99,7 +89,93 @@ final class Init extends Command
         $this->setName('init')
             ->setDescription('Scaffold .dx-metrics.json and a teams template in the target repository')
             ->addArgument('path', InputArgument::REQUIRED, 'Path to the git repository')
-            ->addOption('force', null, InputOption::VALUE_NONE, 'Overwrite existing .dx-metrics.json');
+            ->addOption('force', null, InputOption::VALUE_NONE, 'Overwrite existing files')
+            ->addOption('update', null, InputOption::VALUE_NONE, 'Add new unmapped authors to the existing teams file');
+    }
+
+    private function runUpdate(string $repoPath, string $teamsFile, OutputInterface $output): int
+    {
+        if (!file_exists($teamsFile)) {
+            $output->writeln(\sprintf('<error>%s not found. Run init first to create it.</error>', $teamsFile));
+
+            return Command::FAILURE;
+        }
+
+        $output->writeln('<options=bold>dx-metrics init --update</>');
+        $output->writeln('');
+
+        $existing = json_decode((string) file_get_contents($teamsFile), true);
+        if (!\is_array($existing)) {
+            $output->writeln('<error>Could not parse existing teams file.</error>');
+
+            return Command::FAILURE;
+        }
+
+        // Collect all emails already known (in any team or _unassigned)
+        $knownEmails = [];
+        foreach ($existing['teams'] ?? [] as $emails) {
+            foreach ((array) $emails as $email) {
+                $knownEmails[strtolower((string) $email)] = true;
+            }
+        }
+        foreach ($existing['_unassigned'] ?? [] as $email) {
+            $knownEmails[strtolower((string) $email)] = true;
+        }
+
+        $authorDetails = $this->scanAuthors($repoPath);
+        $newAuthors = array_diff_key($authorDetails, $knownEmails);
+
+        if ([] === $newAuthors) {
+            $output->writeln('No new contributors found.');
+
+            return Command::SUCCESS;
+        }
+
+        // Merge into existing _unassigned / _unassigned_details
+        $existingUnassigned = $existing['_unassigned'] ?? [];
+        $existingDetails = $existing['_unassigned_details'] ?? [];
+
+        foreach ($newAuthors as $email => $detail) {
+            $existingUnassigned[] = $email;
+            $existingDetails[$email] = $detail;
+        }
+        sort($existingUnassigned);
+        ksort($existingDetails);
+
+        $existing['_unassigned'] = $existingUnassigned;
+        $existing['_unassigned_details'] = $existingDetails;
+
+        file_put_contents($teamsFile, json_encode($existing, \JSON_PRETTY_PRINT | \JSON_UNESCAPED_SLASHES)."\n");
+
+        $output->writeln(\sprintf('Added <info>%d</info> new contributor(s) to <info>%s</info>:', \count($newAuthors), $teamsFile));
+        foreach ($newAuthors as $email => $detail) {
+            $output->writeln(\sprintf('  + %s (%s)', $email, $detail['name']));
+        }
+
+        return Command::SUCCESS;
+    }
+
+    /**
+     * Scans git authors from the last 12 months.
+     * Returns email => ['name' => ..., 'example_commit' => ...], sorted by email.
+     *
+     * @return array<string, array{name: string, example_commit: string}>
+     */
+    private function scanAuthors(string $repoPath): array
+    {
+        $git = new Git($repoPath);
+        $since = new \DateTimeImmutable('-12 months');
+        $commits = $git->getCommitsWithAuthorDetails($since, null);
+
+        $authorDetails = [];
+        foreach ($commits as $commit) {
+            $email = strtolower($commit['email']);
+            // git log is newest-first; overwriting means we keep the oldest commit SHA
+            $authorDetails[$email] = ['name' => $commit['name'], 'example_commit' => $commit['sha']];
+        }
+        ksort($authorDetails);
+
+        return $authorDetails;
     }
 
     private function detectSourceDir(string $repoPath): ?string

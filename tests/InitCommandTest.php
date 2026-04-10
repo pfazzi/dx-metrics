@@ -165,6 +165,71 @@ class InitCommandTest extends TestCase
         self::assertSame('.dx-metrics-teams.json', $config['teams']);
     }
 
+    public function test_update_adds_new_authors_to_existing_teams_file(): void
+    {
+        // Run init to create the teams file with alice
+        $this->commit($this->repoPath, new \DateTimeImmutable('-2 months'),
+            'feat: alice', ['/src/Foo.php' => "v1\n"], 'alice@example.com');
+        $this->executeCommand(['path' => $this->repoPath]);
+
+        // Now bob appears in a new commit
+        $this->commit($this->repoPath, new \DateTimeImmutable('-1 week'),
+            'feat: bob', ['/src/Bar.php' => "v1\n"], 'bob@example.com');
+
+        $tester = $this->executeCommand(['path' => $this->repoPath, '--update' => true]);
+
+        self::assertSame(0, $tester->getStatusCode());
+        $teams = json_decode((string) file_get_contents($this->repoPath.'/.dx-metrics-teams.json'), true);
+        self::assertContains('bob@example.com', $teams['_unassigned']);
+        self::assertStringContainsString('bob@example.com', $tester->getDisplay());
+    }
+
+    public function test_update_does_not_add_authors_already_assigned_to_a_team(): void
+    {
+        // alice is already assigned to a team in the teams file
+        $teamsData = [
+            'teams' => ['platform' => ['alice@example.com']],
+            '_unassigned' => [],
+        ];
+        file_put_contents($this->repoPath.'/.dx-metrics-teams.json', json_encode($teamsData));
+
+        $this->commit($this->repoPath, new \DateTimeImmutable('-1 month'),
+            'feat: alice again', ['/src/Foo.php' => "v1\n"], 'alice@example.com');
+
+        $tester = $this->executeCommand(['path' => $this->repoPath, '--update' => true]);
+
+        self::assertSame(0, $tester->getStatusCode());
+        self::assertStringContainsString('No new contributors', $tester->getDisplay());
+        $teams = json_decode((string) file_get_contents($this->repoPath.'/.dx-metrics-teams.json'), true);
+        self::assertNotContains('alice@example.com', $teams['_unassigned']);
+    }
+
+    public function test_update_does_not_add_authors_already_in_unassigned(): void
+    {
+        $teamsData = [
+            'teams' => ['team-a' => []],
+            '_unassigned' => ['alice@example.com'],
+        ];
+        file_put_contents($this->repoPath.'/.dx-metrics-teams.json', json_encode($teamsData));
+
+        $this->commit($this->repoPath, new \DateTimeImmutable('-1 month'),
+            'feat: alice', ['/src/Foo.php' => "v1\n"], 'alice@example.com');
+
+        $tester = $this->executeCommand(['path' => $this->repoPath, '--update' => true]);
+
+        self::assertSame(0, $tester->getStatusCode());
+        self::assertStringContainsString('No new contributors', $tester->getDisplay());
+    }
+
+    public function test_update_fails_when_teams_file_does_not_exist(): void
+    {
+        $tester = $this->executeCommand(['path' => $this->repoPath, '--update' => true]);
+
+        self::assertSame(1, $tester->getStatusCode());
+        self::assertStringContainsString('not found', $tester->getDisplay());
+        self::assertStringContainsString('init first', $tester->getDisplay());
+    }
+
     private function executeCommand(array $args): CommandTester
     {
         $app = new Application();

@@ -22,10 +22,15 @@ final class Init extends Command
         $configFile = $repoPath.'/.dx-metrics.json';
         $teamsFile = $repoPath.'/.dx-metrics-teams.json';
 
-        if (file_exists($configFile) && !$force) {
-            $output->writeln(\sprintf('<error>.dx-metrics.json already exists in %s. Use --force to overwrite.</error>', $repoPath));
+        if (!$force) {
+            $existing = array_filter([$configFile, $teamsFile], 'file_exists');
+            if ([] !== $existing) {
+                foreach ($existing as $file) {
+                    $output->writeln(\sprintf('<error>%s already exists. Use --force to overwrite.</error>', $file));
+                }
 
-            return Command::FAILURE;
+                return Command::FAILURE;
+            }
         }
 
         $output->writeln('<options=bold>dx-metrics init</>');

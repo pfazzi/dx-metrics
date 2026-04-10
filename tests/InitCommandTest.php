@@ -110,9 +110,21 @@ class InitCommandTest extends TestCase
         self::assertStringContainsString('--force', $tester->getDisplay());
     }
 
+    public function test_fails_when_teams_file_already_exists_without_force(): void
+    {
+        file_put_contents($this->repoPath.'/.dx-metrics-teams.json', '{}');
+
+        $tester = $this->executeCommand(['path' => $this->repoPath]);
+
+        self::assertSame(1, $tester->getStatusCode());
+        self::assertStringContainsString('already exists', $tester->getDisplay());
+        self::assertStringContainsString('--force', $tester->getDisplay());
+    }
+
     public function test_force_flag_overwrites_existing_config(): void
     {
         file_put_contents($this->repoPath.'/.dx-metrics.json', '{"old": true}');
+        file_put_contents($this->repoPath.'/.dx-metrics-teams.json', '{"old": true}');
         $this->commit($this->repoPath, new \DateTimeImmutable('-1 month'),
             'feat: init', ['/src/Foo.php' => "v1\n"], 'alice@example.com');
 

@@ -38,25 +38,27 @@ final class TerritoryMap extends Command
         $output->writeln('Use the module table below to drill into which specific modules drive the coupling.');
         $output->writeln('');
 
-        $teamsFile = $input->getOption('teams');
+        $repoPath = $input->getArgument('path');
+        $config = DxMetricsConfig::fromRepoPath($repoPath);
+
+        $teamsFile = $input->getOption('teams') ?? $config->get('teams');
         if (null === $teamsFile) {
             $output->writeln('<error>The --teams option is required.</error>');
 
             return Command::FAILURE;
         }
 
-        $repoPath = $input->getArgument('path');
-        $depth = (int) $input->getOption('depth');
-        $minCoupling = (int) $input->getOption('min-coupling');
+        $depth = (int) ($input->getOption('depth') ?? $config->get('depth', 2));
+        $minCoupling = (int) ($input->getOption('min-coupling') ?? $config->get('min-coupling', 0));
         $outputDir = $input->getOption('output-dir') ?? (string) getcwd();
-        $excludePatterns = $input->getOption('exclude');
-        $filter = $input->getOption('filter');
+        $excludePatterns = [] !== $input->getOption('exclude') ? $input->getOption('exclude') : ($config->get('exclude') ?? []);
+        $filter = $input->getOption('filter') ?? $config->get('filter');
 
-        $since = $input->getOption('since');
+        $since = $input->getOption('since') ?? $config->get('since');
         if ($since) {
             $since = new \DateTimeImmutable($since);
         }
-        $until = $input->getOption('until');
+        $until = $input->getOption('until') ?? $config->get('until');
         if ($until) {
             $until = new \DateTimeImmutable($until);
         }
@@ -129,9 +131,9 @@ final class TerritoryMap extends Command
             ->setDescription('Visual map of teams with cross-team volatility coupling — one node per team')
             ->addArgument('path', InputArgument::REQUIRED, 'Path to the git repository')
             ->addOption('teams', 'T', InputOption::VALUE_REQUIRED, 'Path to teams JSON config file')
-            ->addOption('depth', 'd', InputOption::VALUE_OPTIONAL, 'Number of path segments that define a module (e.g. 2 = src/Domain)', 2)
+            ->addOption('depth', 'd', InputOption::VALUE_OPTIONAL, 'Number of path segments that define a module (e.g. 2 = src/Domain)', null)
             ->addOption('filter', 'f', InputOption::VALUE_OPTIONAL, 'Only include files matching this path prefix (e.g. src/)', default: null)
-            ->addOption('min-coupling', 'c', InputOption::VALUE_OPTIONAL, 'Minimum cross-team co-change count to draw an edge (default: 0)', 0)
+            ->addOption('min-coupling', 'c', InputOption::VALUE_OPTIONAL, 'Minimum cross-team co-change count to draw an edge (default: 0)', null)
             ->addOption('since', 's', InputOption::VALUE_OPTIONAL, default: null)
             ->addOption('until', 'u', InputOption::VALUE_OPTIONAL, default: null)
             ->addOption('exclude', null, InputOption::VALUE_IS_ARRAY | InputOption::VALUE_REQUIRED, default: [])

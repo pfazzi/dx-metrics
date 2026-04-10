@@ -26,16 +26,18 @@ class SharedOwnership extends Command
         $output->writeln('');
 
         $repoPath = $input->getArgument('path');
-        $teamsFile = $input->getOption('teams');
-        $pathFilter = $input->getOption('filter');
-        $excludePatterns = $input->getOption('exclude');
-        $minTeams = (int) $input->getOption('min-teams');
+        $config = DxMetricsConfig::fromRepoPath($repoPath);
 
-        $since = $input->getOption('since');
+        $teamsFile = $input->getOption('teams') ?? $config->get('teams');
+        $pathFilter = $input->getOption('filter') ?? $config->get('filter');
+        $excludePatterns = [] !== $input->getOption('exclude') ? $input->getOption('exclude') : ($config->get('exclude') ?? []);
+        $minTeams = (int) ($input->getOption('min-teams') ?? $config->get('min-teams', 2));
+
+        $since = $input->getOption('since') ?? $config->get('since');
         if ($since) {
             $since = new \DateTimeImmutable($since);
         }
-        $until = $input->getOption('until');
+        $until = $input->getOption('until') ?? $config->get('until');
         if ($until) {
             $until = new \DateTimeImmutable($until);
         }
@@ -90,6 +92,6 @@ class SharedOwnership extends Command
             ->addOption('until', 'u', InputOption::VALUE_OPTIONAL, 'Include commits before this date (e.g. 2024-12-31)', null)
             ->addOption('filter', 'f', InputOption::VALUE_OPTIONAL, 'Only show files matching this path prefix', null)
             ->addOption('exclude', null, InputOption::VALUE_IS_ARRAY | InputOption::VALUE_REQUIRED, 'Exclude files matching these glob patterns (repeatable)', [])
-            ->addOption('min-teams', 'm', InputOption::VALUE_OPTIONAL, 'Minimum number of teams to include a file (default: 2)', 2);
+            ->addOption('min-teams', 'm', InputOption::VALUE_OPTIONAL, 'Minimum number of teams to include a file (default: 2)', null);
     }
 }

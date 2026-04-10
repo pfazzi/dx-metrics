@@ -21,7 +21,7 @@ final class OwnershipHotspots extends Command
         $output->writeln('');
         $output->writeln('Ranks files with ambiguous team ownership by urgency.');
         $output->writeln('<comment>Dominant Team</comment> is the team with the highest number of commits on a file, shown with its percentage of total commits. A low percentage even for the dominant team signals highly fragmented ownership.');
-        $output->writeln('<comment>Entropy</comment> (0–1) is the normalised Shannon entropy of commit distribution across teams: 0 = one team owns all commits, 1 = commits split perfectly equally among all teams.');
+        $output->writeln('<comment>Entropy</comment> (0–1) measures ownership concentration: 0 means one team made all the commits (clear ownership), 1 means every team contributed equally (no one really owns it).');
         $output->writeln('<comment>Risk Score</comment> = entropy × total commits: a file frequently changed by multiple teams scores higher than a rarely-touched one with the same entropy split.');
         $output->writeln('Start from the top: high-scoring files represent the greatest hidden coordination cost between teams and are the best candidates for an ownership clarification conversation.');
         $output->writeln('');

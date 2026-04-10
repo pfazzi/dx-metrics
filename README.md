@@ -137,11 +137,11 @@ Files with a high risk score are the best candidates for an ownership clarificat
 
 ## Territory Map
 
-Generates a **visual map of the codebase** that answers: *who owns what, and where are teams implicitly coupled?*
+Generates a **visual map of team territories and their coupling**, answering: *who owns what, and where are teams implicitly forced to coordinate?*
 
-Files are grouped into **modules** by path depth (configurable with `--depth`). Each module becomes a node in the graph, coloured by its dominant team. Edges between modules represent **volatility coupling** — the number of commits that touched files in both modules at the same time.
+The graph has **one node per team**. Edges represent **cross-team volatility coupling** — the total number of commits that touched code from both teams at the same time. A thick edge is a Conway's Law violation: two teams sharing code changes without a shared owner.
 
-The image makes Conway's Law violations visible at a glance: an edge between two differently-coloured modules means two teams are implicitly coordinating through shared code, even if no one planned for it.
+Files are first grouped into modules by path depth (`--depth`), then modules are aggregated per dominant team into a single node. The module-level detail is printed as a table in the terminal for drill-down.
 
 ### How modules are defined
 
@@ -193,12 +193,10 @@ This prints a summary table to stdout and writes `territory.dot` and `territory.
 
 ### Reading the graph
 
-Modules are grouped into **boxes by dominant team**. Each box background is the team's colour.
+- **Node** → one team. Colour is unique per team. Label shows number of modules owned, total commits, and average ownership entropy across those modules.
+- **Edge thickness and label** → total co-change count summed across all module pairs between the two teams. Thicker = stronger implicit coordination cost between the teams.
+- **No edge** → those two teams' code never (or rarely) changed together. Clear boundary.
 
-- **Red edges** → cross-team volatility coupling (Conway's Law violations). These are the only edges shown — same-team coupling is hidden to keep the image readable.
-- **Edge thickness and label** → number of commits that touched files in both modules. Thicker = stronger implicit coordination cost.
-- **Node label** → module name, ownership entropy, and total commits.
+Use `--min-coupling=N` to suppress weak edges and focus on the most significant Conway violations.
 
-Use `--min-coupling=N` to hide weak cross-team edges and focus on the most significant violations.
-
-A module with high entropy *and* thick red edges to other teams is a double signal: no one clearly owns it, and multiple teams are forced to touch it together.
+The module-level table printed in the terminal lets you drill into which specific modules are responsible for each edge.

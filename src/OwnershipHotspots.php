@@ -20,6 +20,7 @@ final class OwnershipHotspots extends Command
         $output->writeln('<options=bold>Ownership Hotspots</>');
         $output->writeln('');
         $output->writeln('Ranks files with ambiguous team ownership by urgency.');
+        $output->writeln('<comment>Entropy</comment> (0–1) is the normalised Shannon entropy of commit distribution across teams: 0 = one team owns all commits, 1 = commits split perfectly equally among all teams.');
         $output->writeln('<comment>Risk Score</comment> = entropy × total commits: a file frequently changed by multiple teams scores higher than a rarely-touched one with the same entropy split.');
         $output->writeln('Start from the top: high-scoring files represent the greatest hidden coordination cost between teams and are the best candidates for an ownership clarification conversation.');
         $output->writeln('');

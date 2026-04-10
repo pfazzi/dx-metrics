@@ -39,15 +39,16 @@ final class Init extends Command
         // Scan git authors from the last 12 months
         $git = new Git($repoPath);
         $since = new \DateTimeImmutable('-12 months');
-        $commits = $git->getCommitsWithAuthorEmail($since, null);
+        $commits = $git->getCommitsWithAuthorDetails($since, null);
 
-        $emails = [];
+        // Collect first-seen commit per email (git log is newest-first, so last write wins → oldest)
+        $authorDetails = [];
         foreach ($commits as $commit) {
             $email = strtolower($commit['email']);
-            $emails[$email] = true;
+            $authorDetails[$email] = ['name' => $commit['name'], 'example_commit' => $commit['sha']];
         }
-        ksort($emails);
-        $unassigned = array_keys($emails);
+        ksort($authorDetails);
+        $unassigned = array_keys($authorDetails);
 
         $output->writeln(\sprintf('Found <info>%d</info> contributors in the last 12 months.', \count($unassigned)));
 
@@ -65,6 +66,7 @@ final class Init extends Command
                 'team-b' => [],
             ],
             '_unassigned' => $unassigned,
+            '_unassigned_details' => $authorDetails,
         ];
         file_put_contents($teamsFile, json_encode($teamsTemplate, \JSON_PRETTY_PRINT | \JSON_UNESCAPED_SLASHES)."\n");
 

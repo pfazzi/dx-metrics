@@ -76,6 +76,24 @@ class InitCommandTest extends TestCase
         self::assertContains('bob@example.com', $teams['_unassigned']);
     }
 
+    public function test_unassigned_details_contains_name_and_example_commit_for_each_author(): void
+    {
+        $this->commit($this->repoPath, new \DateTimeImmutable('-1 month'),
+            'feat: work', ['/src/Foo.php' => "v1\n"], 'alice@example.com');
+
+        $this->executeCommand(['path' => $this->repoPath]);
+
+        $teams = json_decode((string) file_get_contents($this->repoPath.'/.dx-metrics-teams.json'), true);
+        self::assertArrayHasKey('_unassigned_details', $teams);
+        self::assertArrayHasKey('alice@example.com', $teams['_unassigned_details']);
+
+        $detail = $teams['_unassigned_details']['alice@example.com'];
+        self::assertArrayHasKey('name', $detail);
+        self::assertArrayHasKey('example_commit', $detail);
+        self::assertNotEmpty($detail['name']);
+        self::assertMatchesRegularExpression('/^[0-9a-f]{40}$/', $detail['example_commit']);
+    }
+
     public function test_auto_detects_src_directory_as_filter(): void
     {
         mkdir($this->repoPath.'/src', 0777, true);

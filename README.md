@@ -88,3 +88,44 @@ Outputs a table sorted by **ownership entropy** (0 = single owner, 1 = perfectly
 ```
 
 Authors not listed in the teams config are grouped under `unknown`.
+
+---
+
+## Ownership Hotspots
+
+Identifies files with **ambiguous ownership**, ranked by urgency. The risk score combines ownership entropy with commit frequency — a file touched often by multiple teams is more urgent than a rarely-changed one with the same entropy.
+
+> `risk score = ownership entropy × total commits`
+
+### Usage
+
+```bash
+./dx-metrics ownership-hotspots <path-to-repo> --teams=teams.json [options]
+```
+
+| Option | Short | Description |
+|---|---|---|
+| `--teams` | `-T` | Path to the teams JSON config file (required) |
+| `--since` | `-s` | Include commits after this date (e.g. `2024-01-01`) |
+| `--until` | `-u` | Include commits before this date (e.g. `2024-12-31`) |
+| `--filter` | `-f` | Only show files matching this path prefix |
+| `--min-teams` | `-m` | Minimum number of teams to show a file (default: 2) |
+
+### Example
+
+```bash
+./dx-metrics ownership-hotspots /path/to/repo --teams=teams.json --since=2024-01-01
+```
+
+Output sorted by risk score descending:
+
+```
++------------------+--------+-------+----------------------+---------+------------+
+| File             | Commits| Teams | Dominant Team        | Entropy | Risk Score |
++------------------+--------+-------+----------------------+---------+------------+
+| src/Order.php    | 87     | 3     | platform (40%)       | 0.91    | 79.2       |
+| src/Invoice.php  | 34     | 2     | payments (55%)       | 0.79    | 26.9       |
++------------------+--------+-------+----------------------+---------+------------+
+```
+
+Files with a high risk score are the best candidates for an ownership clarification conversation between teams.

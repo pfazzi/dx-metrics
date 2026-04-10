@@ -10,16 +10,19 @@ readonly class TerritoryMapAnalyzer
     {
     }
 
-    /** @param string[] $excludePatterns */
+    /**
+     * @param string[] $excludePatterns
+     */
     public function analyze(
         int $depth,
         ?\DateTimeImmutable $since = null,
         ?\DateTimeImmutable $until = null,
         array $excludePatterns = [],
+        ?string $filter = null,
     ): TerritoryMapOutput {
         return new TerritoryMapOutput(
-            $this->buildModules($depth, $since, $until, $excludePatterns),
-            $this->buildEdges($depth, $since, $until, $excludePatterns),
+            $this->buildModules($depth, $since, $until, $excludePatterns, $filter),
+            $this->buildEdges($depth, $since, $until, $excludePatterns, $filter),
         );
     }
 
@@ -29,12 +32,17 @@ readonly class TerritoryMapAnalyzer
         ?\DateTimeImmutable $since,
         ?\DateTimeImmutable $until,
         array $excludePatterns,
+        ?string $filter,
     ): array {
         $ownershipAnalyzer = new SharedOwnershipAnalyzer($this->git, $this->teamConfig);
         $ownership = $ownershipAnalyzer->analyze($since, $until);
 
         if ([] !== $excludePatterns) {
             $ownership = $ownership->filterByExcludedPatterns($excludePatterns);
+        }
+
+        if (null !== $filter) {
+            $ownership = $ownership->filterByPath($filter);
         }
 
         /** @var array<string, array<string, int>> $moduleTeamCounts module => [team => count] */
@@ -61,10 +69,12 @@ readonly class TerritoryMapAnalyzer
         ?\DateTimeImmutable $since,
         ?\DateTimeImmutable $until,
         array $excludePatterns,
+        ?string $filter,
     ): array {
         $coupleAnalyzer = new Analyzer($this->git);
         $coupling = $coupleAnalyzer->analyze($since, $until)
             ->filterByExcludedPatterns($excludePatterns)
+            ->filterByPath($filter)
             ->getUniqueFilePairs();
 
         /** @var array<string, array<string, int>> $edgeCounts moduleA => [moduleB => totalCoChanges] */

@@ -165,6 +165,7 @@ Start with `--depth=2` and adjust until the granularity matches your architectur
 |---|---|---|
 | `--teams` | `-T` | Path to the teams JSON config file (required) |
 | `--depth` | `-d` | Number of path segments that define a module (default: 2) |
+| `--filter` | `-f` | Only include files matching this path prefix (e.g. `src/`) |
 | `--since` | `-s` | Include commits after this date (e.g. `2024-01-01`) |
 | `--until` | `-u` | Include commits before this date (e.g. `2024-12-31`) |
 | `--exclude` | | Exclude files matching this glob pattern (repeatable, e.g. `--exclude='.sqlx/*'`) |

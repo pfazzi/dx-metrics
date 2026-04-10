@@ -21,7 +21,7 @@ class SharedOwnership extends Command
         $output->writeln('');
         $output->writeln('Lists files touched by more than one team, sorted by ownership entropy.');
         $output->writeln('<comment>Dominant Team</comment> is the team with the highest number of commits on a file, shown with its percentage of total commits.');
-        $output->writeln('<comment>Entropy</comment> (0–1) measures how evenly commits are spread across teams: 0 = single clear owner, 1 = perfectly equal split between all teams.');
+        $output->writeln('<comment>Entropy</comment> (0–1) measures ownership concentration: 0 means one team made all the commits (clear ownership), 1 means every team contributed equally (no one really owns it).');
         $output->writeln('A high-entropy file has no dominant owner — changes are likely uncoordinated, increasing the risk of conflicts and unexpected regressions.');
         $output->writeln('');
 

@@ -2,3 +2,7 @@ vendor
 composer.lock
 /.php-cs-fixer.cache
 /.phpunit.result.cache
+/coupling.dot
+/coupling.png
+/territory.dot
+/territory.png

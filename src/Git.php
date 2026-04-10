@@ -49,6 +49,37 @@ readonly class Git
         return $commits;
     }
 
+    /**
+     * Returns commits as [['sha' => string, 'email' => string, 'name' => string], ...].
+     * Uses tab-separated format to safely handle author names containing spaces.
+     *
+     * @return array<int, array{sha: string, email: string, name: string}>
+     */
+    public function getCommitsWithAuthorDetails(?\DateTimeImmutable $since = null, ?\DateTimeImmutable $until = null): array
+    {
+        $command = 'git log --all --format="%H%x09%ae%x09%an"';
+
+        if ($since) {
+            $command .= " --since=\"{$since->format('Y-m-d 00:00:00')}\"";
+        }
+        if ($until) {
+            $command .= " --until=\"{$until->format('Y-m-d 23:59:59')}\"";
+        }
+
+        $lines = $this->runCommand($command, $this->repoPath);
+
+        $commits = [];
+        foreach ($lines as $line) {
+            if ('' === $line) {
+                continue;
+            }
+            [$sha, $email, $name] = explode("\t", $line, 3);
+            $commits[] = ['sha' => $sha, 'email' => trim($email), 'name' => trim($name)];
+        }
+
+        return $commits;
+    }
+
     public function getCommitsSha(?\DateTimeImmutable $since = null, ?\DateTimeImmutable $until = null): array
     {
         $command = 'git rev-list --all';
